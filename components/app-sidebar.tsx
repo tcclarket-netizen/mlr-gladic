@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   FolderOpen,
-  Upload,
   FileText,
   Mail,
   Building2,
@@ -29,7 +28,6 @@ import { SignOutButton } from "@/components/auth/sign-out-button"
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Cases", href: "/cases", icon: FolderOpen },
-  { label: "Uploads", href: "/upload", icon: Upload },
   { label: "Reports", href: "/reports", icon: FileText },
   { label: "Letters", href: "/letters", icon: Mail },
   { label: "Agency Filings", href: "/agency-filings", icon: Building2 },
