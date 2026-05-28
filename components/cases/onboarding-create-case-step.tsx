@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useActionState, useEffect } from "react"
 import { ArrowLeft, ArrowRight, FolderPlus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ type OnboardingCreateCaseStepProps = {
 
 export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreateCaseStepProps) {
   const [state, formAction, pending] = useActionState(createCase, initialState)
+  const showUpgradeLink = state.error?.includes("Monthly case limit reached")
 
   useEffect(() => {
     if (state.caseId) {
@@ -41,7 +43,17 @@ export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreate
 
       {state.error && (
         <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/8 px-3 py-2.5 text-sm text-destructive">
-          {state.error}
+          <div className="flex items-center justify-between gap-3">
+            <span>{state.error}</span>
+            {showUpgradeLink ? (
+              <Link
+                href="/billing"
+                className="shrink-0 rounded-sm underline underline-offset-2 transition-colors hover:text-foreground"
+              >
+                Upgrade plan
+              </Link>
+            ) : null}
+          </div>
         </div>
       )}
 

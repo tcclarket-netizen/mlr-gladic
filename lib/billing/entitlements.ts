@@ -13,11 +13,9 @@ export function getProcessingEntitlement(
     "plan_key" | "billing_status" | "stripe_default_payment_method_id"
   > | null
 ): ProcessingEntitlement {
+  // New users may not have a billing row yet; default to free-trial access.
   if (!billing) {
-    return {
-      allowed: false,
-      reason: "Choose a paid plan in Billing to process reports.",
-    }
+    return { allowed: true }
   }
 
   // Free trial processing is quota-limited in usage checks, not hard-blocked here.
@@ -48,12 +46,7 @@ export function getCaseCreationEntitlement(
     "plan_key" | "billing_status" | "stripe_default_payment_method_id"
   > | null
 ): ProcessingEntitlement {
-  if (!billing) {
-    return {
-      allowed: false,
-      reason: "Choose a plan in Billing to create cases.",
-    }
-  }
+  if (!billing) return { allowed: true }
 
   // Free trial is quota-limited in usage checks, not hard-blocked here.
   if (billing.plan_key === "free_trial") {
@@ -69,12 +62,7 @@ export function getUploadEntitlement(
     "plan_key" | "billing_status" | "stripe_default_payment_method_id"
   > | null
 ): ProcessingEntitlement {
-  if (!billing) {
-    return {
-      allowed: false,
-      reason: "Choose a plan in Billing to upload reports.",
-    }
-  }
+  if (!billing) return { allowed: true }
 
   // Free trial is quota-limited in usage checks, not hard-blocked here.
   if (billing.plan_key === "free_trial") {
@@ -90,12 +78,7 @@ export function getExportEntitlement(
     "plan_key" | "billing_status" | "stripe_default_payment_method_id"
   > | null
 ): ProcessingEntitlement {
-  if (!billing) {
-    return {
-      allowed: false,
-      reason: "Choose a plan in Billing to export reports.",
-    }
-  }
+  if (!billing) return { allowed: true }
 
   // Free trial is quota-limited in usage checks, not hard-blocked here.
   if (billing.plan_key === "free_trial") {
