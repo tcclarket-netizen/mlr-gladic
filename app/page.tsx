@@ -115,7 +115,7 @@ export default function LandingPage() {
             </Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/reports">View Sample Report</Link>
+            <Link href="/sign-in">Sign In</Link>
           </Button>
         </div>
         <p className="mt-4 text-xs text-muted-foreground">Free trial available. No credit card required.</p>
