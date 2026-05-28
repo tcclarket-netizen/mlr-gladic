@@ -1,7 +1,8 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,7 +18,25 @@ type ProfileSettingsFormProps = {
 }
 
 export function ProfileSettingsForm({ fullName, accountType, email }: ProfileSettingsFormProps) {
+  const router = useRouter()
   const [state, formAction, pending] = useActionState(updateProfileSettings, initialState)
+  const [fullNameValue, setFullNameValue] = useState(fullName)
+  const [accountTypeValue, setAccountTypeValue] = useState<AccountType>(accountType)
+
+  useEffect(() => {
+    if (state.success) {
+      router.refresh()
+    }
+  }, [router, state.success])
+
+  useEffect(() => {
+    if (state.fullName) {
+      setFullNameValue(state.fullName)
+    }
+    if (state.accountType) {
+      setAccountTypeValue(state.accountType)
+    }
+  }, [state.accountType, state.fullName])
 
   return (
     <form action={formAction} className="space-y-4">
@@ -37,7 +56,13 @@ export function ProfileSettingsForm({ fullName, accountType, email }: ProfileSet
           <Label htmlFor="fullName" className="text-xs font-medium">
             Full name
           </Label>
-          <Input id="fullName" name="fullName" defaultValue={fullName} required />
+          <Input
+            id="fullName"
+            name="fullName"
+            value={fullNameValue}
+            onChange={(e) => setFullNameValue(e.target.value)}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-xs font-medium">
@@ -52,7 +77,8 @@ export function ProfileSettingsForm({ fullName, accountType, email }: ProfileSet
           <select
             id="accountType"
             name="accountType"
-            defaultValue={accountType}
+            value={accountTypeValue}
+            onChange={(e) => setAccountTypeValue(e.target.value as AccountType)}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="consumer">Consumer</option>

@@ -7,6 +7,8 @@ import type { AccountType } from "@/types/profile"
 export type SettingsActionState = {
   error?: string
   success?: string
+  fullName?: string
+  accountType?: AccountType
 }
 
 export async function updateProfileSettings(
@@ -30,12 +32,14 @@ export async function updateProfileSettings(
 
   const { error } = await supabase
     .from("profiles")
-    .update({
+    .upsert({
+      id: user.id,
       full_name: fullName,
       account_type: accountType,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", user.id)
+    .select("id")
+    .single()
 
   if (error) return { error: error.message }
 
@@ -49,7 +53,11 @@ export async function updateProfileSettings(
   revalidatePath("/settings")
   revalidatePath("/", "layout")
 
-  return { success: "Profile updated." }
+  return {
+    success: "Profile updated.",
+    fullName,
+    accountType,
+  }
 }
 
 export async function sendPasswordResetEmail(
