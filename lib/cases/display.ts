@@ -13,17 +13,23 @@ export function countBureauUploads(reports: CaseListItem["uploaded_reports"]) {
   return reports?.length ?? 0
 }
 
-export function reportSummaryLabel(reports: CaseListItem["uploaded_reports"]) {
+export function reportSummaryLabel(
+  reports: CaseListItem["uploaded_reports"],
+  metrics?: CaseListItem["metrics"]
+) {
   const count = countBureauUploads(reports)
   if (count === 0) return "Not started"
+  const allProcessed = reports.length > 0 && reports.every((r) => r.status === "processed")
+  const hasMetrics =
+    metrics &&
+    typeof metrics === "object" &&
+    "tradeline_count" in metrics &&
+    Number((metrics as { tradeline_count?: number }).tradeline_count) > 0
+  if (allProcessed && hasMetrics) return "Generated"
+  if (reports.some((r) => r.status === "processing")) return "Processing"
   if (count < 3) return "In Progress"
-  const allProcessed = reports.every((r) => r.status === "processed")
-  if (allProcessed) return "Generated"
-  const anyProcessing = reports.some(
-    (r) => r.status === "processing" || r.status === "uploaded"
-  )
-  if (anyProcessing) return "In Progress"
-  return "Needs Review"
+  if (allProcessed) return "Needs Processing"
+  return "In Progress"
 }
 
 export const caseStatusStyles: Record<CaseStatus, string> = {
@@ -51,7 +57,7 @@ export function getCaseDisplayMeta(caseItem: CaseListItem) {
   return {
     reference: caseReferenceCode(caseItem.id),
     bureauCount: countBureauUploads(caseItem.uploaded_reports),
-    reportLabel: reportSummaryLabel(caseItem.uploaded_reports),
+    reportLabel: reportSummaryLabel(caseItem.uploaded_reports, caseItem.metrics),
     updated: formatCaseDate(caseItem.updated_at),
   }
 }

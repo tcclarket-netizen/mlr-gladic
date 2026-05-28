@@ -223,41 +223,8 @@ export async function removeReportUpload(caseId: string, bureau: Bureau) {
 }
 
 export async function startCaseProcessing(caseId: string) {
-  const { supabase, user } = await assertCaseOwnership(caseId)
-
-  const { data: reports } = await supabase
-    .from("uploaded_reports")
-    .select("id")
-    .eq("case_id", caseId)
-
-  if (!reports?.length) {
-    return { error: "Upload at least one bureau report before processing." }
-  }
-
-  await supabase
-    .from("uploaded_reports")
-    .update({ status: "processing" })
-    .eq("case_id", caseId)
-
-  await supabase
-    .from("cases")
-    .update({ status: "review" })
-    .eq("id", caseId)
-
-  await logCaseEvent(
-    supabase,
-    user.id,
-    caseId,
-    "processing_started",
-    "Report extraction queued",
-    { report_count: reports.length }
-  )
-
-  revalidatePath(`/cases/${caseId}`)
-  revalidatePath("/dashboard")
-
-  // Phase 2: wire to extraction pipeline
-  return { success: true }
+  await assertCaseOwnership(caseId)
+  return { success: true, useApi: true as const }
 }
 
 export { storagePathForReport }

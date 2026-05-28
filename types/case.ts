@@ -4,6 +4,8 @@ export type Bureau = "experian" | "equifax" | "transunion"
 
 export type UploadedReportStatus = "uploaded" | "processing" | "processed" | "failed"
 
+import type { CaseMetrics } from "@/types/credit-report"
+
 export type Case = {
   id: string
   user_id: string
@@ -11,6 +13,7 @@ export type Case = {
   state: string
   notes: string | null
   status: CaseStatus
+  metrics?: CaseMetrics | Record<string, unknown>
   created_at: string
   updated_at: string
 }

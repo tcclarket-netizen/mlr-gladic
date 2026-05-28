@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import type { CaseListItem, CaseWithReports } from "@/types/case"
+import type { CaseMetrics } from "@/types/credit-report"
+import { EMPTY_METRICS } from "@/types/credit-report"
+import type { Tradeline, Inquiry, Collection } from "@/types/tradeline"
+import type { GeneratedReport, LegalReportContent } from "@/types/legal-report"
 
 export async function getCasesForUser(): Promise<CaseListItem[]> {
   const supabase = await createClient()
@@ -60,6 +64,59 @@ export async function getCaseById(caseId: string): Promise<CaseWithReports | nul
   )
 
   return caseData
+}
+
+export type CaseExtractionData = {
+  case: CaseWithReports
+  metrics: CaseMetrics
+  tradelines: Tradeline[]
+  inquiries: Inquiry[]
+  collections: Collection[]
+  legalReport: GeneratedReport | null
+}
+
+export async function getCaseExtractionData(
+  caseId: string
+): Promise<CaseExtractionData | null> {
+  const caseData = await getCaseById(caseId)
+  if (!caseData) return null
+
+  const supabase = await createClient()
+
+  const [tradelinesRes, inquiriesRes, collectionsRes, reportRes] = await Promise.all([
+    supabase.from("tradelines").select("*").eq("case_id", caseId).order("creditor_name"),
+    supabase.from("inquiries").select("*").eq("case_id", caseId).order("inquiry_date", {
+      ascending: false,
+    }),
+    supabase.from("collections").select("*").eq("case_id", caseId),
+    supabase
+      .from("generated_reports")
+      .select("*")
+      .eq("case_id", caseId)
+      .eq("report_type", "legal_report")
+      .maybeSingle(),
+  ])
+
+  const metrics =
+    caseData.metrics && typeof caseData.metrics === "object" && Object.keys(caseData.metrics).length > 0
+      ? (caseData.metrics as CaseMetrics)
+      : EMPTY_METRICS
+
+  const legalReport = reportRes.data
+    ? ({
+        ...reportRes.data,
+        content: reportRes.data.content as LegalReportContent,
+      } as GeneratedReport)
+    : null
+
+  return {
+    case: caseData,
+    metrics,
+    tradelines: (tradelinesRes.data ?? []) as Tradeline[],
+    inquiries: (inquiriesRes.data ?? []) as Inquiry[],
+    collections: (collectionsRes.data ?? []) as Collection[],
+    legalReport,
+  }
 }
 
 export async function getDashboardStats() {
