@@ -23,6 +23,7 @@ type BureauUploadPanelProps = {
   existingReports?: UploadedReport[]
   compact?: boolean
   onUploadComplete?: () => void
+  disabledReason?: string | null
 }
 
 function initialSlots(existingReports?: UploadedReport[]) {
@@ -49,6 +50,7 @@ export function BureauUploadPanel({
   existingReports,
   compact = false,
   onUploadComplete,
+  disabledReason,
 }: BureauUploadPanelProps) {
   const [slots, setSlots] = useState(() => initialSlots(existingReports))
   const fileInputRefs = useRef<Record<BureauKey, HTMLInputElement | null>>({
@@ -184,6 +186,7 @@ export function BureauUploadPanel({
               )}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
+                if (disabledReason) return
                 e.preventDefault()
                 const file = e.dataTransfer.files[0]
                 if (file) uploadFile(key, file)
@@ -246,7 +249,7 @@ export function BureauUploadPanel({
                       size="sm"
                       variant="outline"
                       type="button"
-                      disabled={state.status === "uploading"}
+                      disabled={state.status === "uploading" || Boolean(disabledReason)}
                       onClick={() => fileInputRefs.current[key]?.click()}
                     >
                       {state.status === "uploading" ? (
@@ -269,6 +272,9 @@ export function BureauUploadPanel({
         {readyCount}/3 bureau reports uploaded
         {readyCount < 3 && " — 3-bureau uploads produce the strongest analysis."}
       </p>
+      {disabledReason ? (
+        <p className="text-xs text-muted-foreground">{disabledReason}</p>
+      ) : null}
     </div>
   )
 }

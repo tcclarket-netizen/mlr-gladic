@@ -1,9 +1,18 @@
 import { z } from "zod"
 
 const bureauEnum = z.enum(["experian", "equifax", "transunion"])
+const REQUIRED_FALLBACK = "Unknown"
+
+const requiredString = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : REQUIRED_FALLBACK
+  }
+  return REQUIRED_FALLBACK
+}, z.string())
 
 export const extractedTradelineSchema = z.object({
-  creditor_name: z.string(),
+  creditor_name: requiredString,
   account_type: z.string().optional().nullable(),
   account_status: z.string().optional().nullable(),
   balance: z.number().optional().nullable(),
@@ -15,19 +24,19 @@ export const extractedTradelineSchema = z.object({
 })
 
 export const extractedInquirySchema = z.object({
-  creditor_name: z.string(),
+  creditor_name: requiredString,
   inquiry_type: z.enum(["hard", "soft", "unknown"]).optional().default("unknown"),
   inquiry_date: z.string().optional().nullable(),
 })
 
 export const extractedCollectionSchema = z.object({
-  creditor_name: z.string(),
+  creditor_name: requiredString,
   balance: z.number().optional().nullable(),
   status: z.string().optional().nullable(),
 })
 
 export const extractedPublicRecordSchema = z.object({
-  record_type: z.string(),
+  record_type: requiredString,
   status: z.string().optional().nullable(),
   amount: z.number().optional().nullable(),
   filing_date: z.string().optional().nullable(),

@@ -9,12 +9,14 @@ type ProcessReportsButtonProps = {
   caseId: string
   uploadCount: number
   disabled?: boolean
+  disabledReason?: string | null
 }
 
 export function ProcessReportsButton({
   caseId,
   uploadCount,
   disabled,
+  disabledReason,
 }: ProcessReportsButtonProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +28,7 @@ export function ProcessReportsButton({
         <p className="max-w-xs text-right text-xs text-destructive">{error}</p>
       )}
       <Button
-        disabled={disabled || uploadCount === 0 || pending}
+        disabled={disabled || uploadCount === 0 || pending || Boolean(disabledReason)}
         onClick={() => {
           setError(null)
           startTransition(async () => {
@@ -58,6 +60,9 @@ export function ProcessReportsButton({
           "Process Reports"
         )}
       </Button>
+      {disabledReason && !pending && (
+        <p className="max-w-xs text-right text-[11px] text-muted-foreground">{disabledReason}</p>
+      )}
       {pending && (
         <p className="max-w-xs text-right text-[11px] text-muted-foreground">
           This may take 1–3 minutes per bureau. Do not close this tab.

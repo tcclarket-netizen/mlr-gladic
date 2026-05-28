@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { CREDIT_REPORTS_BUCKET, storagePathForReport } from "@/lib/cases/constants"
+import {
+  getCaseCreationEntitlement,
+  getUploadEntitlement,
+} from "@/lib/billing/entitlements"
+import { checkMonthlyCaseQuota } from "@/lib/billing/usage-limits"
+import type { BillingPlanKey } from "@/lib/billing/plans"
 import type { AccountType } from "@/types/profile"
 import type { Bureau } from "@/types/case"
 
@@ -40,6 +46,22 @@ async function assertCaseOwnership(caseId: string) {
   }
 
   return { supabase, user }
+}
+
+async function getBillingEntitlement(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  type: "case" | "upload"
+) {
+  const { data: billing } = await supabase
+    .from("user_billing")
+    .select("plan_key, billing_status, stripe_default_payment_method_id")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  return type === "case"
+    ? getCaseCreationEntitlement(billing)
+    : getUploadEntitlement(billing)
 }
 
 async function logCaseEvent(
@@ -84,6 +106,23 @@ export async function createCase(
 ): Promise<CaseActionState> {
   try {
     const { supabase, user } = await requireUser()
+    const entitlement = await getBillingEntitlement(supabase, user.id, "case")
+    if (!entitlement.allowed) {
+      return { error: entitlement.reason ?? "Your plan does not allow creating cases." }
+    }
+    const { data: billing } = await supabase
+      .from("user_billing")
+      .select("plan_key")
+      .eq("user_id", user.id)
+      .maybeSingle()
+    const quota = await checkMonthlyCaseQuota(
+      supabase,
+      user.id,
+      (billing?.plan_key as BillingPlanKey | undefined) ?? "free_trial"
+    )
+    if (!quota.allowed) {
+      return { error: quota.reason }
+    }
 
     const clientName = String(formData.get("clientName") ?? "").trim()
     const state = String(formData.get("state") ?? "").trim()
@@ -141,6 +180,10 @@ export async function recordReportUpload(input: {
   fileSize: number
 }) {
   const { supabase, user } = await assertCaseOwnership(input.caseId)
+  const entitlement = await getBillingEntitlement(supabase, user.id, "upload")
+  if (!entitlement.allowed) {
+    return { error: entitlement.reason ?? "Your plan does not allow report uploads." }
+  }
 
   const { data: existing } = await supabase
     .from("uploaded_reports")

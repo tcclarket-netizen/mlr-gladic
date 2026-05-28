@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/supabase/profile"
 import { caseReferenceCode } from "@/lib/cases/constants"
 import { BureauUploadPanel } from "@/components/cases/bureau-upload-panel"
 import { ProcessReportsButton } from "@/components/cases/process-reports-button"
+import { getUserBilling } from "@/lib/billing/queries"
+import { getProcessingEntitlement, getUploadEntitlement } from "@/lib/billing/entitlements"
 
 export default async function CaseUploadPage({
   params,
@@ -13,7 +15,11 @@ export default async function CaseUploadPage({
   params: Promise<{ caseId: string }>
 }) {
   const { caseId } = await params
-  const [caseData, user] = await Promise.all([getCaseById(caseId), getCurrentUser()])
+  const [caseData, user, billing] = await Promise.all([
+    getCaseById(caseId),
+    getCurrentUser(),
+    getUserBilling(),
+  ])
 
   if (!caseData || !user) {
     notFound()
@@ -21,6 +27,8 @@ export default async function CaseUploadPage({
 
   const uploadCount = caseData.uploaded_reports.length
   const reference = caseReferenceCode(caseData.id)
+  const entitlement = getProcessingEntitlement(billing)
+  const uploadEntitlement = getUploadEntitlement(billing)
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,6 +55,7 @@ export default async function CaseUploadPage({
           caseId={caseId}
           userId={user.id}
           existingReports={caseData.uploaded_reports}
+          disabledReason={uploadEntitlement.allowed ? null : uploadEntitlement.reason ?? null}
         />
 
         <div className="mt-4 flex items-start gap-2 rounded-md border border-status-warning/30 bg-status-warning/5 px-4 py-3">
@@ -79,7 +88,11 @@ export default async function CaseUploadPage({
                   : "All three bureaus uploaded."}
             </p>
           </div>
-          <ProcessReportsButton caseId={caseId} uploadCount={uploadCount} />
+          <ProcessReportsButton
+            caseId={caseId}
+            uploadCount={uploadCount}
+            disabledReason={entitlement.allowed ? null : entitlement.reason ?? null}
+          />
         </div>
 
         <p className="mt-8 text-[11px] leading-relaxed text-muted-foreground">

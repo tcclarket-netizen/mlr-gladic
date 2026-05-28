@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { caseReferenceCode } from "@/lib/cases/constants"
 import { generateLegalReportPdf } from "@/lib/report-generation/legal-report-pdf"
+import { getExportEntitlement } from "@/lib/billing/entitlements"
 import type { LegalReportContent } from "@/types/legal-report"
 
 export const runtime = "nodejs"
@@ -18,6 +19,20 @@ export async function GET(
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { data: billing } = await supabase
+    .from("user_billing")
+    .select("plan_key, billing_status, stripe_default_payment_method_id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  const entitlement = getExportEntitlement(billing)
+  if (!entitlement.allowed) {
+    return NextResponse.json(
+      { error: entitlement.reason ?? "Your plan does not allow report exports." },
+      { status: 402 }
+    )
   }
 
   const { data: report, error } = await supabase

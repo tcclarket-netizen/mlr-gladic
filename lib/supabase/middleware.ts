@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/auth/confirm",
   "/auth/auth-code-error",
+  "/api/stripe/webhook",
 ]
 
 function isPublicPath(pathname: string) {
