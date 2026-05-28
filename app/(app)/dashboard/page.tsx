@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { getCurrentProfile } from "@/lib/supabase/profile"
 import { getDashboardStats } from "@/lib/cases/queries"
+import { CaseAnalyticsCharts } from "@/components/dashboard/case-analytics-charts"
 import {
   caseStatusLabel,
   caseStatusStyles,
@@ -98,6 +99,11 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
+
+        <CaseAnalyticsCharts
+          casesByDay={stats.casesByDay}
+          statusCounts={stats.statusCounts}
+        />
 
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">

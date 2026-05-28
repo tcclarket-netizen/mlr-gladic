@@ -128,11 +128,47 @@ export async function getDashboardStats() {
       sum + (c.uploaded_reports?.filter((r) => r.status === "processed").length ?? 0),
     0
   )
+  const statusCounts = cases.reduce(
+    (acc, c) => {
+      acc[c.status] += 1
+      return acc
+    },
+    { draft: 0, active: 0, review: 0, closed: 0 }
+  )
+
+  const dayLabels: string[] = []
+  const casesByDaySeed = new Map<string, number>()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  for (let i = 13; i >= 0; i -= 1) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const key = d.toISOString().slice(0, 10)
+    dayLabels.push(key)
+    casesByDaySeed.set(key, 0)
+  }
+
+  for (const c of cases) {
+    const created = new Date(c.created_at)
+    if (Number.isNaN(created.getTime())) continue
+    const key = created.toISOString().slice(0, 10)
+    if (casesByDaySeed.has(key)) {
+      casesByDaySeed.set(key, (casesByDaySeed.get(key) ?? 0) + 1)
+    }
+  }
+
+  const casesByDay = dayLabels.map((key) => ({
+    date: key,
+    count: casesByDaySeed.get(key) ?? 0,
+  }))
 
   return {
     activeCases,
     totalUploads,
     readyReports,
     recentCases: cases.slice(0, 5),
+    statusCounts,
+    casesByDay,
   }
 }

@@ -11,23 +11,31 @@ create table if not exists public.cases (
   updated_at timestamptz not null default now()
 );
 
+grant usage on schema public to anon, authenticated, service_role;
+grant select, insert, update, delete on public.cases to authenticated;
+grant select, insert, update, delete on public.cases to service_role;
+
 create index if not exists cases_user_id_idx on public.cases (user_id);
 create index if not exists cases_updated_at_idx on public.cases (updated_at desc);
 
 alter table public.cases enable row level security;
 
+drop policy if exists "Users can view own cases" on public.cases;
 create policy "Users can view own cases"
   on public.cases for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can create own cases" on public.cases;
 create policy "Users can create own cases"
   on public.cases for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own cases" on public.cases;
 create policy "Users can update own cases"
   on public.cases for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own cases" on public.cases;
 create policy "Users can delete own cases"
   on public.cases for delete
   using (auth.uid() = user_id);
@@ -50,22 +58,29 @@ create table if not exists public.uploaded_reports (
   unique (case_id, bureau)
 );
 
+grant select, insert, update, delete on public.uploaded_reports to authenticated;
+grant select, insert, update, delete on public.uploaded_reports to service_role;
+
 create index if not exists uploaded_reports_case_id_idx on public.uploaded_reports (case_id);
 
 alter table public.uploaded_reports enable row level security;
 
+drop policy if exists "Users can view own uploaded reports" on public.uploaded_reports;
 create policy "Users can view own uploaded reports"
   on public.uploaded_reports for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own uploaded reports" on public.uploaded_reports;
 create policy "Users can insert own uploaded reports"
   on public.uploaded_reports for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own uploaded reports" on public.uploaded_reports;
 create policy "Users can update own uploaded reports"
   on public.uploaded_reports for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own uploaded reports" on public.uploaded_reports;
 create policy "Users can delete own uploaded reports"
   on public.uploaded_reports for delete
   using (auth.uid() = user_id);
@@ -81,14 +96,19 @@ create table if not exists public.case_events (
   created_at timestamptz not null default now()
 );
 
+grant select, insert, update, delete on public.case_events to authenticated;
+grant select, insert, update, delete on public.case_events to service_role;
+
 create index if not exists case_events_case_id_idx on public.case_events (case_id, created_at desc);
 
 alter table public.case_events enable row level security;
 
+drop policy if exists "Users can view own case events" on public.case_events;
 create policy "Users can view own case events"
   on public.case_events for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own case events" on public.case_events;
 create policy "Users can insert own case events"
   on public.case_events for insert
   with check (auth.uid() = user_id);
@@ -127,6 +147,7 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists "Users can read own credit report files" on storage.objects;
 create policy "Users can read own credit report files"
   on storage.objects for select
   using (
@@ -134,6 +155,7 @@ create policy "Users can read own credit report files"
     and auth.uid()::text = (storage.foldername (name))[1]
   );
 
+drop policy if exists "Users can upload own credit report files" on storage.objects;
 create policy "Users can upload own credit report files"
   on storage.objects for insert
   with check (
@@ -141,6 +163,7 @@ create policy "Users can upload own credit report files"
     and auth.uid()::text = (storage.foldername (name))[1]
   );
 
+drop policy if exists "Users can update own credit report files" on storage.objects;
 create policy "Users can update own credit report files"
   on storage.objects for update
   using (
@@ -148,6 +171,7 @@ create policy "Users can update own credit report files"
     and auth.uid()::text = (storage.foldername (name))[1]
   );
 
+drop policy if exists "Users can delete own credit report files" on storage.objects;
 create policy "Users can delete own credit report files"
   on storage.objects for delete
   using (
