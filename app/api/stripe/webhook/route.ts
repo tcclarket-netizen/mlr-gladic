@@ -17,6 +17,31 @@ function subscriptionStatus(status: Stripe.Subscription.Status) {
   return "none"
 }
 
+async function cancelExistingSubscriptionForUser(userId: string, stripe: Stripe) {
+  const admin = createAdminClient()
+  const { data: billing } = await admin
+    .from("user_billing")
+    .select("stripe_subscription_id")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  const subscriptionId = billing?.stripe_subscription_id
+  if (!subscriptionId) return
+
+  try {
+    const existing = await stripe.subscriptions.retrieve(subscriptionId)
+    if (existing.status !== "canceled") {
+      await stripe.subscriptions.cancel(subscriptionId)
+    }
+  } catch (error) {
+    const stripeError = error as Stripe.errors.StripeError
+    // If the subscription is already gone/canceled, continue billing sync.
+    if (stripeError?.code !== "resource_missing") {
+      throw error
+    }
+  }
+}
+
 async function upsertFromSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient()
   const planFromMeta = subscription.metadata?.plan_key
@@ -70,6 +95,8 @@ export async function POST(request: Request) {
 
       if (planKey === "pay_per_report") {
         if (session.mode === "setup" && typeof session.setup_intent === "string") {
+          await cancelExistingSubscriptionForUser(userId, stripe)
+
           const setupIntent = await stripe.setupIntents.retrieve(session.setup_intent)
           const paymentMethodId =
             typeof setupIntent.payment_method === "string"
@@ -80,9 +107,12 @@ export async function POST(request: Request) {
             user_id: userId,
             stripe_customer_id: customerId,
             stripe_subscription_id: null,
+            stripe_price_id: null,
             stripe_default_payment_method_id: paymentMethodId,
             plan_key: "pay_per_report",
             billing_status: "active",
+            current_period_end: null,
+            cancel_at_period_end: false,
             updated_at: new Date().toISOString(),
           })
         }

@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils"
 import { BILLING_PLANS } from "@/lib/billing/plans"
 import { getUserBilling } from "@/lib/billing/queries"
 import { BillingActions, PlanCheckoutButton } from "@/components/billing/billing-actions"
+import { createClient } from "@/lib/supabase/server"
+import { getStripeClient } from "@/lib/stripe/config"
 
 type UsageItem = {
   label: string
@@ -11,6 +13,16 @@ type UsageItem = {
   limit: number | null
   unit: string
   hint: string
+}
+
+type PaymentHistoryItem = {
+  id: string
+  paid_at: string
+  source: "pay_per_report" | "subscription"
+  description: string
+  charged_amount_cents: number
+  currency: string
+  reference_id: string | null
 }
 
 function formatPeriodEnd(iso: string | null) {
@@ -82,8 +94,78 @@ function buildUsageItems(planKey: string | undefined, reportsChargedCount: numbe
   ]
 }
 
+async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data: rows } = await supabase
+    .from("generated_reports")
+    .select("id, generated_at, case_id, charged_amount_cents, stripe_payment_intent_id")
+    .eq("user_id", user.id)
+    .eq("report_type", "legal_report")
+    .eq("status", "ready")
+    .not("charged_amount_cents", "is", null)
+    .order("generated_at", { ascending: false })
+    .limit(20)
+
+  if (!rows?.length) return []
+
+  const caseIds = [...new Set(rows.map((row) => row.case_id))]
+  const { data: cases } = await supabase.from("cases").select("id, client_name").in("id", caseIds)
+  const caseNameById = new Map((cases ?? []).map((c) => [c.id, c.client_name]))
+  const payPerReportItems: PaymentHistoryItem[] = rows.map((row) => ({
+    id: `ppr_${row.id}`,
+    paid_at: row.generated_at,
+    source: "pay_per_report",
+    description: `Report charge${caseNameById.get(row.case_id) ? ` - ${caseNameById.get(row.case_id)}` : ""}`,
+    charged_amount_cents: row.charged_amount_cents ?? 0,
+    currency: (process.env.STRIPE_PAY_PER_REPORT_CURRENCY ?? "usd").toUpperCase(),
+    reference_id: row.stripe_payment_intent_id ?? null,
+  }))
+
+  const { data: billing } = await supabase
+    .from("user_billing")
+    .select("stripe_customer_id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  let subscriptionItems: PaymentHistoryItem[] = []
+  if (billing?.stripe_customer_id) {
+    try {
+      const stripe = getStripeClient()
+      const invoices = await stripe.invoices.list({
+        customer: billing.stripe_customer_id,
+        limit: 20,
+        status: "paid",
+      })
+
+      subscriptionItems = invoices.data
+        .filter((inv) => inv.status === "paid" && (inv.amount_paid ?? 0) > 0)
+        .map((inv) => ({
+          id: `sub_${inv.id}`,
+          paid_at: new Date((inv.status_transitions.paid_at ?? inv.created) * 1000).toISOString(),
+          source: "subscription",
+          description: inv.description ?? inv.lines.data[0]?.description ?? "Subscription payment",
+          charged_amount_cents: inv.amount_paid ?? 0,
+          currency: (inv.currency ?? "usd").toUpperCase(),
+          reference_id: inv.id,
+        }))
+    } catch {
+      // Do not break billing page if Stripe is temporarily unavailable.
+      subscriptionItems = []
+    }
+  }
+
+  return [...payPerReportItems, ...subscriptionItems].sort(
+    (a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime()
+  )
+}
+
 export default async function BillingPage() {
-  const billing = await getUserBilling()
+  const [billing, paymentHistory] = await Promise.all([getUserBilling(), getPaymentHistory()])
   const currentPlan = BILLING_PLANS.find((p) => p.key === (billing?.plan_key ?? "free_trial"))
   const selectedPlanForCheckout = currentPlan?.key === "free_trial" ? "consultant" : currentPlan?.key ?? null
   const usageItems = buildUsageItems(billing?.plan_key, billing?.reports_charged_count ?? 0)
@@ -156,6 +238,59 @@ export default async function BillingPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Payment History</h2>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            {paymentHistory.length === 0 ? (
+              <p className="px-4 py-6 text-sm text-muted-foreground">
+                No payments recorded yet.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-secondary/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Date</th>
+                      <th className="px-4 py-3 font-medium">Type</th>
+                      <th className="px-4 py-3 font-medium">Description</th>
+                      <th className="px-4 py-3 font-medium">Amount</th>
+                      <th className="px-4 py-3 font-medium">Reference</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentHistory.map((item) => (
+                      <tr key={item.id} className="border-t border-border">
+                        <td className="px-4 py-3 text-foreground">
+                          {new Date(item.paid_at).toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td className="px-4 py-3 text-foreground">
+                          {item.source === "subscription" ? "Subscription" : "Pay-per-report"}
+                        </td>
+                        <td className="px-4 py-3 text-foreground">
+                          {item.description}
+                        </td>
+                        <td className="px-4 py-3 text-foreground">
+                          {(item.charged_amount_cents / 100).toLocaleString("en-US", {
+                            style: "currency",
+                            currency: item.currency || "USD",
+                          })}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {item.reference_id ?? "n/a"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
