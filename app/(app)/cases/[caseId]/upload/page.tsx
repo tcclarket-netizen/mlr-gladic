@@ -61,7 +61,7 @@ export default async function CaseUploadPage({
         <div className="mt-4 flex items-start gap-2 rounded-md border border-status-warning/30 bg-status-warning/5 px-4 py-3">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-warning" />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            <span className="font-medium text-foreground">Scanned or image-only PDFs</span> may
+            <span className="font-medium text-foreground">Scanned or image-only PDFs</span>&nbsp;may
             require manual review. For best results, use the digital PDF from each bureau&apos;s
             website.
           </p>

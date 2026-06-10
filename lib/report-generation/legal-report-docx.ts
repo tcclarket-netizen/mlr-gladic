@@ -49,7 +49,7 @@ function paragraphsFromBlock(text: string, opts?: { italics?: boolean }) {
   return text.split("\n").map((line) => paragraph(line, { italics: opts?.italics }))
 }
 
-function sectionTitleParagraph(number: number, title: string) {
+function sectionTitleParagraph(number: number | string, title: string) {
   return paragraph(sectionHeading(number, title), {
     bold: true,
     size: SIZE_HEADING,
@@ -87,8 +87,8 @@ export async function generateLegalReportDocx(
     paragraph("TABLE OF CONTENTS", { bold: true, size: SIZE_HEADING })
   )
 
-  content.table_of_contents.forEach((title, i) => {
-    children.push(paragraph(`${i + 1}. ${title}`))
+  content.sections.forEach((section) => {
+    children.push(paragraph(`${section.number}. ${section.title}`))
   })
 
   children.push(new Paragraph({ children: [new PageBreak()] }))

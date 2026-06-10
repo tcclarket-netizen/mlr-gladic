@@ -17,6 +17,7 @@ export const extractedTradelineSchema = z.object({
   account_status: z.string().optional().nullable(),
   balance: z.number().optional().nullable(),
   credit_limit: z.number().optional().nullable(),
+  past_due_amount: z.number().optional().nullable(),
   date_opened: z.string().optional().nullable(),
   is_negative: z.boolean().optional().default(false),
   payment_history_notes: z.string().optional().nullable(),
@@ -42,11 +43,33 @@ export const extractedPublicRecordSchema = z.object({
   filing_date: z.string().optional().nullable(),
 })
 
+export const extractedAddressSchema = z.object({
+  line: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  postal_code: z.string().optional().nullable(),
+  status: z.enum(["current", "former", "unknown"]).optional().default("unknown"),
+  reported_date: z.string().optional().nullable(),
+})
+
+export const extractedEmployerSchema = z.object({
+  name: requiredString,
+  status: z.enum(["current", "former", "unknown"]).optional().default("unknown"),
+  reported_date: z.string().optional().nullable(),
+})
+
 export const bureauExtractionSchema = z.object({
   bureau: bureauEnum,
   credit_score: z.number().int().min(300).max(850).optional().nullable(),
   consumer_name: z.string().optional().nullable(),
   report_date: z.string().optional().nullable(),
+  bureau_level_utilization_pct: z.number().min(0).optional().nullable(),
+  bureau_level_credit_used: z.number().min(0).optional().nullable(),
+  bureau_level_credit_limit: z.number().min(0).optional().nullable(),
+  active_revolving_credit_limit_total: z.number().min(0).optional().nullable(),
+  active_revolving_credit_used_total: z.number().min(0).optional().nullable(),
+  addresses: z.array(extractedAddressSchema).default([]),
+  employers: z.array(extractedEmployerSchema).default([]),
   tradelines: z.array(extractedTradelineSchema).default([]),
   inquiries: z.array(extractedInquirySchema).default([]),
   collections: z.array(extractedCollectionSchema).default([]),

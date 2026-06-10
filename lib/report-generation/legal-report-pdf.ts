@@ -2,11 +2,6 @@ import "server-only"
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib"
 import type { LegalReportContent } from "@/types/legal-report"
 import { sectionHeading } from "@/lib/report-generation/report-template"
-import {
-  formatBureauCheckboxes,
-  formatScoresLine,
-  formatUtilizationLine,
-} from "@/lib/metrics/executive-snapshot"
 
 const PAGE_WIDTH = 612
 const PAGE_HEIGHT = 792
@@ -218,7 +213,6 @@ export async function generateLegalReportPdf(
   const writer = await PdfWriter.create()
   const muted = rgb(0.28, 0.33, 0.41)
   const cover = content.cover
-  const snap = content.metrics.executive_snapshot
 
   // DOCX title uses 32 half-points (16pt)
   writer.writeCentered(cover.title, writer.boldFont, 16)
@@ -247,31 +241,9 @@ export async function generateLegalReportPdf(
   writer.addPage()
   writer.writeHeading("TABLE OF CONTENTS", 13)
   writer.addVerticalSpace(4)
-  content.table_of_contents.forEach((title, i) => {
-    writer.writeBlock(`${i + 1}. ${title}`, { fontSize: 11, gap: 2 })
+  content.sections.forEach((section) => {
+    writer.writeBlock(`${section.number}. ${section.title}`, { fontSize: 11, gap: 2 })
   })
-
-  writer.addPage()
-  writer.writeHeading(sectionHeading(4, "TurnKey Credit Metrics & Executive Snapshot"), 13)
-
-  const m = content.metrics
-  const metricsBlock = [
-    snap ? formatScoresLine(snap) : "Scores: N/A",
-    `TurnKey Credit Average Score (3-bureau): ${m.average_score ?? "N/A"}`,
-    snap ? formatUtilizationLine(snap) : "",
-    `TurnKey Credit Average Usage (3-bureau): ${m.average_utilization != null ? `${m.average_utilization}%` : "N/A"}`,
-    `TurnKey AIR (Annual Inquiry Rate proxy): ${m.inquiry_rate ?? "N/A"}`,
-    "Executive View:",
-    snap ? `Credit Tier: ${snap.credit_tier}` : "",
-    snap ? `Risk Profile: ${snap.risk_profile}` : "",
-    snap ? `Funding Readiness: ${snap.funding_readiness}` : "",
-    ...(snap?.primary_limiters ?? []).map((l) => `Primary Limiter: ${l}`),
-    `Bureaus Reviewed: ${formatBureauCheckboxes(m.bureaus_analyzed)}`,
-  ]
-    .filter(Boolean)
-    .join("\n")
-
-  writer.writeBlock(metricsBlock, { fontSize: 11, gap: 16 })
 
   for (const section of content.sections) {
     writer.addPage()

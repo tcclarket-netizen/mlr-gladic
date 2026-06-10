@@ -11,15 +11,40 @@ export const US_STATES = [
   "Wisconsin", "Wyoming",
 ] as const
 
+export const BUREAU_LOGO_PATHS: Record<Bureau, string> = {
+  experian: "/bureaus/experian.png",
+  equifax: "/bureaus/equifax.png",
+  transunion: "/bureaus/transunion.png",
+}
+
 export const BUREAUS: {
   key: Bureau
   name: string
   color: string
   abbr: string
+  logoSrc: string
 }[] = [
-  { key: "experian", name: "Experian", color: "text-red-600", abbr: "EXP" },
-  { key: "equifax", name: "Equifax", color: "text-blue-600", abbr: "EFX" },
-  { key: "transunion", name: "TransUnion", color: "text-blue-800", abbr: "TU" },
+  {
+    key: "experian",
+    name: "Experian",
+    color: "text-[#6E2C91]",
+    abbr: "EXP",
+    logoSrc: BUREAU_LOGO_PATHS.experian,
+  },
+  {
+    key: "equifax",
+    name: "Equifax",
+    color: "text-[#9E1B32]",
+    abbr: "EFX",
+    logoSrc: BUREAU_LOGO_PATHS.equifax,
+  },
+  {
+    key: "transunion",
+    name: "TransUnion",
+    color: "text-[#003B5C]",
+    abbr: "TU",
+    logoSrc: BUREAU_LOGO_PATHS.transunion,
+  },
 ]
 
 export const CREDIT_REPORTS_BUCKET = "credit-reports"

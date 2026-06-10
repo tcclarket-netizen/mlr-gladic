@@ -11,6 +11,10 @@ export type ExecutiveSnapshot = {
   bureau_abbreviations: Record<Bureau, string>
 }
 
+import type { OppositionReportMetrics } from "@/types/opposition-report"
+
+export type { OppositionReportMetrics } from "@/types/opposition-report"
+
 export type CaseMetrics = {
   average_score: number | null
   average_utilization: number | null
@@ -25,6 +29,7 @@ export type CaseMetrics = {
   tradeline_count: number
   bureaus_analyzed: Bureau[]
   executive_snapshot?: ExecutiveSnapshot
+  opposition_report?: OppositionReportMetrics
 }
 
 export const EMPTY_METRICS: CaseMetrics = {

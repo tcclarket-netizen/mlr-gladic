@@ -5,6 +5,7 @@ import { EMPTY_METRICS } from "@/types/credit-report"
 import type { Bureau } from "@/types/case"
 import type { NormalizedTradelineInput } from "@/lib/normalization/normalize-tradelines"
 import { buildExecutiveSnapshot } from "@/lib/metrics/executive-snapshot"
+import { buildOppositionMetrics } from "@/lib/metrics/build-opposition-metrics"
 
 function parseInquiryDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null
@@ -77,5 +78,6 @@ export function computeCaseMetrics(
   return {
     ...base,
     executive_snapshot: buildExecutiveSnapshot(base, extractions, tradelines),
+    opposition_report: buildOppositionMetrics(extractions) ?? undefined,
   }
 }

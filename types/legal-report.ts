@@ -13,7 +13,8 @@ export type LegalReportCover = {
 
 export type LegalReportSection = {
   id: string
-  number: number
+  /** Section label in headings/TOC (e.g. 3, "3A", 4). */
+  number: number | string
   title: string
   body: string
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { BUREAUS, CREDIT_REPORTS_BUCKET, storagePathForReport } from "@/lib/cases/constants"
+import { BureauLogo } from "@/components/cases/bureau-logo"
 import { recordReportUpload, removeReportUpload } from "@/lib/cases/actions"
 import type { Bureau, UploadedReport } from "@/types/case"
 
@@ -157,7 +158,7 @@ export function BureauUploadPanel({
 
   return (
     <div className="space-y-4">
-      {BUREAUS.map(({ key, name, color, abbr }) => {
+      {BUREAUS.map(({ key, name, color }) => {
         const state = slots[key]
         return (
           <div key={key}>
@@ -193,14 +194,7 @@ export function BureauUploadPanel({
               }}
             >
               <div className="flex items-center gap-4">
-                <div
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-sm font-semibold",
-                    color
-                  )}
-                >
-                  {abbr}
-                </div>
+                <BureauLogo bureau={key} />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

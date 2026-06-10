@@ -1,9 +1,21 @@
 /** Client-safe report formatting helpers (no server-only). */
 
-export const REPORT_SECTION_DEFINITIONS = [
+export type ReportSectionDefinition = {
+  id: string
+  title: string
+  /** Display label for headings/TOC (e.g. "3A"); defaults to numeric id when parseable. */
+  label?: string
+}
+
+export const REPORT_SECTION_DEFINITIONS: ReportSectionDefinition[] = [
   { id: "1", title: "Consumer Status & Standing" },
   { id: "2", title: "Purpose & Scope of Report" },
   { id: "3", title: "Applicable Legal Authorities" },
+  {
+    id: "3A",
+    title: "Know Your Rights and Protection Under Your Residing State",
+    label: "3A",
+  },
   { id: "4", title: "TurnKey Credit Metrics & Executive Snapshot" },
   { id: "5", title: "Permissible Purpose & Access Review" },
   { id: "6", title: "Liability Classification (Personal vs Business)" },
@@ -24,6 +36,12 @@ export const REPORT_SECTION_DEFINITIONS = [
   { id: "21", title: "Appendices & Exhibits" },
 ] as const
 
-export function sectionHeading(number: number, title: string) {
+export function sectionDisplayNumber(def: ReportSectionDefinition): number | string {
+  if (def.label) return def.label
+  const n = Number(def.id)
+  return Number.isFinite(n) ? n : def.id
+}
+
+export function sectionHeading(number: number | string, title: string) {
   return `SECTION ${number} - ${title.toUpperCase()}`
 }

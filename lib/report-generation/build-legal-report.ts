@@ -10,9 +10,10 @@ import {
   REPORT_COVER,
   REPORT_SECTION_DEFINITIONS,
   getStateLawBlock,
-  sectionHeading,
 } from "@/lib/report-generation/report-template"
+import { sectionDisplayNumber } from "@/lib/report-generation/report-format"
 import { buildAllTradelineFindings } from "@/lib/report-generation/build-tradeline-finding"
+import { buildSection3ABody } from "@/lib/report-generation/build-section-3a"
 import {
   formatBureauCheckboxes,
   formatScoresLine,
@@ -133,6 +134,13 @@ function buildSectionBodies(input: BuildLegalReportInput): Record<string, string
       "• Permissible purpose and access review under 15 U.S.C. § 1681b",
       "• CFPB supervisory/enforcement themes (reasonable investigation, dispute handling)",
     ].join("\n"),
+    "3A": buildSection3ABody({
+      clientName,
+      caseState,
+      extractions,
+      hasCollectionActivity:
+        metrics.collections_count > 0 || metrics.negative_item_count > 0,
+    }),
     "4": section4,
     "5": [
       "Each inquiry and tradeline must be supported by documented permissible purpose under 15 U.S.C. § 1681b.",
@@ -232,7 +240,7 @@ export function buildLegalReport(input: BuildLegalReportInput): LegalReportConte
 
   const sections: LegalReportSection[] = REPORT_SECTION_DEFINITIONS.map((def) => ({
     id: def.id,
-    number: Number(def.id),
+    number: sectionDisplayNumber(def),
     title: def.title,
     body: bodies[def.id] ?? "",
   }))

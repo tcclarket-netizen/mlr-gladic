@@ -215,7 +215,7 @@ export function CaseDetailView({
         {hasExtraction && (
           <div className="mb-6">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              TurnKey Metrics
+              Opposition Report™ Analysis
             </h2>
             <CaseMetricsGrid metrics={displayMetrics} />
           </div>
