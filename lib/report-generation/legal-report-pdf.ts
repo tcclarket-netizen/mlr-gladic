@@ -190,7 +190,7 @@ class PdfWriter {
     const footerSize = 7
 
     pages.forEach((page, index) => {
-      const footer = sanitizeTextForPdf(`TurnKey Credit - Page ${index + 1} of ${pages.length}`)
+      const footer = sanitizeTextForPdf(`GLADIC AI™ - Page ${index + 1} of ${pages.length}`)
       const footerWidth = footerFont.widthOfTextAtSize(footer, footerSize)
       page.drawText(footer, {
         x: (PAGE_WIDTH - footerWidth) / 2,

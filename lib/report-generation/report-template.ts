@@ -9,7 +9,7 @@ export const REPORT_COVER = {
   title: "MY LEGAL REPORT™",
   subtitle:
     "Credit Rights, Deterrence, Rebuttal & Jurisdiction Preservation Report",
-  prepared_by: "TurnKey Credit",
+  prepared_by: "GLADIC AI™",
   classification: "Educational & Self-Help Legal Interpretation",
   client_capacity: "Self-Represented Consumer (28 U.S.C. § 1654)",
   scope: "Federal & State (as applicable)",
@@ -21,12 +21,12 @@ export const NOTICE_OF_LIMITATION = `NOTICE OF LIMITATION & NON-REPRESENTATION
 
 This report is not legal advice.
 This report is not legal representation.
-TurnKey Credit is not a law firm.
+GLADIC AI™ is not a law firm.
 This report is an educational, procedural, and self-help legal interpretation designed to inform consumers of their rights, remedies, and lawful enforcement mechanisms regarding credit reporting activity.
 All actions discussed herein are performed solely by the consumer, acting in their own name, under lawful self-representation authority.`
 
 export const FINAL_DISCLAIMER_BLOCK = `No guarantees are made. No outcomes are promised. This report is educational and procedural only.
-This report is not legal advice. This report is not legal representation. TurnKey Credit is not a law firm.
+This report is not legal advice. This report is not legal representation. GLADIC AI™ is not a law firm.
 Operator prompts must never claim guaranteed deletion/approval. Use procedural deficiency language unless fraud is evidenced.`
 
 export const SUPPORTING_AUTHORITY_BLOCK = `Supporting Authority:

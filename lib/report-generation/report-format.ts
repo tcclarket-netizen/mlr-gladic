@@ -16,7 +16,7 @@ export const REPORT_SECTION_DEFINITIONS: ReportSectionDefinition[] = [
     title: "Know Your Rights and Protection Under Your Residing State",
     label: "3A",
   },
-  { id: "4", title: "TurnKey Credit Metrics & Executive Snapshot" },
+  { id: "4", title: "GLADIC AI™ Metrics & Executive Snapshot" },
   { id: "5", title: "Permissible Purpose & Access Review" },
   { id: "6", title: "Liability Classification (Personal vs Business)" },
   { id: "7", title: "Objective Verifiability Standard" },

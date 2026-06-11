@@ -32,7 +32,7 @@ function normalizeContent(content: LegalReportContent): LegalReportContent {
       title: "MY LEGAL REPORT™",
       subtitle:
         "Credit Rights, Deterrence, Rebuttal & Jurisdiction Preservation Report",
-      prepared_by: "TurnKey Credit",
+      prepared_by: "GLADIC AI™",
       classification: "Educational & Self-Help Legal Interpretation",
       client_capacity: "Self-Represented Consumer (28 U.S.C. § 1654)",
       scope: "Federal & State (as applicable)",
