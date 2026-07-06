@@ -34,7 +34,7 @@ export async function chargePayPerReport(input: {
         payment_method: input.paymentMethodId,
         off_session: true,
         confirm: true,
-        description: `TurnKey pay-per-report charge (${input.caseId})`,
+        description: `GLADIC pay-per-report charge (${input.caseId})`,
         metadata: {
           user_id: input.userId,
           case_id: input.caseId,

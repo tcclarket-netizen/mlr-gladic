@@ -165,7 +165,7 @@ export default function AgencyFilingsPage() {
             <div className="mt-4 flex items-start gap-2 rounded-md border border-status-warning/30 bg-status-warning/5 px-3 py-3">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning" />
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Filing packets are for self-help educational purposes. TurnKey Credit is not a law firm.
+                Filing packets are for self-help educational purposes. GLADIC AI™ is not a law firm.
               </p>
             </div>
           </div>

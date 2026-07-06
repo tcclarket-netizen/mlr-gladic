@@ -61,7 +61,7 @@ export default async function DashboardPage() {
               Good morning, {firstName}
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Here&apos;s a summary of your TurnKey workspace.
+              Here&apos;s a summary of your GLADIC workspace.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
         </div>
 
         <p className="mt-8 text-[11px] leading-relaxed text-muted-foreground">
-          TurnKey Credit is not a law firm and does not provide legal advice. All documents are for
+          GLADIC AI™ is not a law firm and does not provide legal advice. All documents are for
           educational and procedural self-help purposes only.
         </p>
       </div>

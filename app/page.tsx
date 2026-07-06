@@ -70,8 +70,8 @@ export default function LandingPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded bg-primary">
               <Shield className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground">TurnKey</span>
-            <span className="hidden text-[11px] text-muted-foreground sm:block">Credit Report Intelligence</span>
+            <span className="text-sm font-semibold tracking-tight text-foreground">GLADIC</span>
+            <span className="hidden text-[11px] text-muted-foreground sm:block">Legal Report Intelligence</span>
           </div>
           <nav className="hidden items-center gap-6 md:flex">
             <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -165,7 +165,7 @@ export default function LandingPage() {
                   Your reports stay private. Always.
                 </h2>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  Your credit data is among the most sensitive information you own. TurnKey is built from the ground
+                  Your credit data is among the most sensitive information you own. GLADIC AI™ is built from the ground
                   up to protect it with enterprise-grade security practices.
                 </p>
               </div>
@@ -208,7 +208,7 @@ export default function LandingPage() {
       {/* Disclaimer strip */}
       <div className="border-t border-border bg-secondary/30 py-4">
         <p className="px-6 text-center text-[11px] leading-relaxed text-muted-foreground">
-          TurnKey Credit is an educational and self-help document platform. It is not a law firm and does not provide
+          GLADIC AI™ is an educational and self-help document platform. It is not a law firm and does not provide
           legal advice, legal representation, or guarantee the deletion of any credit item or the approval of any
           credit application. All documents generated are for educational and procedural reference only.
         </p>
@@ -221,7 +221,7 @@ export default function LandingPage() {
             <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
               <Shield className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            <span className="text-xs font-medium text-muted-foreground">TurnKey Credit Report Intelligence</span>
+            <span className="text-xs font-medium text-muted-foreground">GLADIC AI™ Legal Report Intelligence</span>
           </div>
           <div className="flex items-center gap-5">
             <Link href="/privacy" className="text-xs text-muted-foreground hover:text-foreground">

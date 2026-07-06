@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'TurnKey Credit Report Intelligence',
+  title: 'GLADIC AI™ Legal Report Intelligence',
   description:
     'Upload bureau reports, extract tradelines, generate legal interpretation reports, dispute packs, and agency filing documents.',
   generator: 'v0.app',

@@ -462,7 +462,6 @@ export async function generateLegalReportDocx(
     paragraph(`Report Classification: ${cover.classification}`),
     paragraph(`Client Capacity: ${cover.client_capacity}`),
     paragraph(`Scope: ${cover.scope}`),
-    paragraph(`Delivery Format: ${cover.delivery_format}`),
     paragraph(`Record Type: ${cover.record_type}`),
     paragraph(""),
     paragraph(`Client: ${content.client_name}`),

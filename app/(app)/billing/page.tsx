@@ -355,7 +355,7 @@ export default async function BillingPage() {
         </div>
 
         <p className="mt-8 text-[11px] leading-relaxed text-muted-foreground">
-          TurnKey Credit is not a law firm and does not provide legal advice. Billing controls access
+          GLADIC AI™ is not a law firm and does not provide legal advice. Billing controls access
           to software features and document tooling only.
         </p>
       </div>

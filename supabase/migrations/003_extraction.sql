@@ -1,4 +1,4 @@
--- Case-level computed metrics (TurnKey summary cards)
+-- Case-level computed metrics (GLADIC summary cards)
 alter table public.cases
   add column if not exists metrics jsonb not null default '{}';
 

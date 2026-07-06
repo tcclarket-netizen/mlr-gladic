@@ -17,7 +17,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     name: "Free Trial",
     priceLabel: "$0",
     period: "14 days",
-    description: "Try TurnKey with a single case and limited report generation.",
+    description: "Try GLADIC AI™ with a single case and limited report generation.",
     mode: "payment",
     features: [
       "1 case",

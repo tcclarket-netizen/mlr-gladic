@@ -55,9 +55,9 @@ export default function AppSidebar({
           <Shield className="h-4 w-4 text-accent-foreground" />
         </div>
         <div>
-          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">TurnKey</span>
+          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">GLADIC</span>
           <span className="block text-[10px] uppercase leading-none tracking-widest text-sidebar-foreground/50">
-            Credit Intelligence
+            Legal Intelligence
           </span>
         </div>
       </div>

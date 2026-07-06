@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <p className="mt-5 text-center text-[11px] leading-relaxed text-muted-foreground">
-          TurnKey Credit is not a law firm and does not provide legal advice.
+          GLADIC AI™ is not a law firm and does not provide legal advice.
         </p>
       </div>
     </div>

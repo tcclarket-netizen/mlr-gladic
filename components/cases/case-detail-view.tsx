@@ -403,7 +403,7 @@ export function CaseDetailView({
         </Tabs>
 
         <p className="mt-8 text-[11px] leading-relaxed text-muted-foreground">
-          TurnKey Credit is not a law firm. All documents are for educational and procedural
+          GLADIC AI™ is not a law firm. All documents are for educational and procedural
           self-help purposes only.
         </p>
       </div>

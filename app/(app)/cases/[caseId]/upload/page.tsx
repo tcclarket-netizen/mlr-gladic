@@ -96,7 +96,7 @@ export default async function CaseUploadPage({
         </div>
 
         <p className="mt-8 text-[11px] leading-relaxed text-muted-foreground">
-          TurnKey Credit is not a law firm. Documents generated from these reports are for
+          GLADIC AI™ is not a law firm. Documents generated from these reports are for
           educational and procedural self-help purposes only.
         </p>
       </div>

@@ -125,7 +125,7 @@ export default function OnboardingPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary shadow-sm">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">Welcome to TurnKey</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Welcome to GLADIC</h1>
           <p className="text-xs text-muted-foreground">
             Let&apos;s get your account set up in a few steps.
           </p>
@@ -284,7 +284,7 @@ export default function OnboardingPage() {
                 Here&apos;s what happens next
               </h2>
               <p className="mb-5 text-sm text-muted-foreground">
-                Once reports are uploaded, TurnKey will process them through these stages.
+                Once reports are uploaded, GLADIC AI™ will process them through these stages.
               </p>
               <ol className="space-y-4">
                 {nextSteps.map(({ icon: Icon, title, desc }, i) => (
@@ -301,7 +301,7 @@ export default function OnboardingPage() {
               </ol>
               <div className="mt-6 rounded-md bg-secondary/60 px-3 py-2.5">
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  TurnKey Credit is not a law firm. All generated documents are for educational and
+                  GLADIC AI™ is not a law firm. All generated documents are for educational and
                   procedural self-help purposes only.
                 </p>
               </div>

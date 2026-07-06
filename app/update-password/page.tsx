@@ -11,7 +11,7 @@ export default function UpdatePasswordPage() {
         <div className="rounded-xl border border-border bg-card p-7 shadow-sm">
           <h2 className="mb-1 text-base font-semibold text-foreground">Set a new password</h2>
           <p className="mb-6 text-sm text-muted-foreground">
-            Choose a strong password for your TurnKey account.
+            Choose a strong password for your GLADIC account.
           </p>
 
           <UpdatePasswordForm />
