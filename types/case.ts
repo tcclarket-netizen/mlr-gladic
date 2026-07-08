@@ -11,6 +11,7 @@ export type Case = {
   user_id: string
   client_name: string
   state: string
+  county: string | null
   notes: string | null
   status: CaseStatus
   metrics?: CaseMetrics | Record<string, unknown>

@@ -68,6 +68,16 @@ export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreate
         </div>
 
         <div className="space-y-1.5">
+          <Label htmlFor="county" className="text-xs font-medium">
+            County
+          </Label>
+          <Input id="county" name="county" placeholder="e.g. Broward" required />
+          <p className="text-[11px] text-muted-foreground">
+            Used for MY SELF REPORT™ court caption ({`{COUNTY}`}, Florida).
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="state" className="text-xs font-medium">
             State of residence
           </Label>

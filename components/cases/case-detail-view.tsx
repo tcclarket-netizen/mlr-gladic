@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { BUREAUS, caseReferenceCode } from "@/lib/cases/constants"
 import { caseStatusLabel, caseStatusStyles, formatCaseDate } from "@/lib/cases/display"
 import { CaseMetricsGrid } from "@/components/cases/case-metrics-grid"
+import { SelfReportTab } from "@/components/cases/self-report-tab"
 import { VerificationBadge } from "@/components/cases/verification-badge"
 import type { CaseExtractionData } from "@/lib/cases/queries"
 import { EMPTY_METRICS } from "@/types/credit-report"
@@ -88,7 +89,8 @@ export function CaseDetailView({
                 </span>
               </div>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                <span className="font-mono">{reference}</span> · {caseData.state} · Updated{" "}
+                <span className="font-mono">{reference}</span>
+                {caseData.county ? ` · ${caseData.county}` : ""} · {caseData.state} · Updated{" "}
                 {formatCaseDate(caseData.updated_at)}
               </p>
             </div>
@@ -233,10 +235,13 @@ export function CaseDetailView({
             <TabsTrigger value="legal-report" disabled={!hasLegalReport}>
               Legal Report
             </TabsTrigger>
+            <TabsTrigger value="self-report" disabled={!hasLegalReport}>
+              Self Report
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-lg border border-border bg-card p-5">
                 <h3 className="text-sm font-semibold text-foreground">Bureau uploads</h3>
                 <p className="mt-1 text-2xl font-semibold">{uploadCount}/3</p>
@@ -260,6 +265,14 @@ export function CaseDetailView({
                     View full report →
                   </Link>
                 )}
+              </div>
+              <div className="rounded-lg border border-border bg-card p-5">
+                <h3 className="text-sm font-semibold text-foreground">MY SELF REPORT™</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {hasLegalReport
+                    ? "Pre-suit self-help package ready to download"
+                    : "Available after legal report is generated"}
+                </p>
               </div>
             </div>
           </TabsContent>
@@ -398,6 +411,16 @@ export function CaseDetailView({
                   <Link href={`/cases/${caseData.id}/report`}>View Full Report</Link>
                 </Button>
               </div>
+            ) : null}
+          </TabsContent>
+
+          <TabsContent value="self-report">
+            {legalReport?.content ? (
+              <SelfReportTab
+                caseId={caseData.id}
+                legalReportContent={legalReport.content}
+                caseCounty={caseData.county}
+              />
             ) : null}
           </TabsContent>
         </Tabs>

@@ -125,12 +125,13 @@ export async function createCase(
     }
 
     const clientName = String(formData.get("clientName") ?? "").trim()
+    const county = String(formData.get("county") ?? "").trim()
     const state = String(formData.get("state") ?? "").trim()
     const notes = String(formData.get("notes") ?? "").trim()
     const redirectTo = String(formData.get("redirectTo") ?? "")
 
-    if (!clientName || !state) {
-      return { error: "Client name and state are required." }
+    if (!clientName || !county || !state) {
+      return { error: "Client name, county, and state are required." }
     }
 
     const { data: caseRow, error } = await supabase
@@ -138,6 +139,7 @@ export async function createCase(
       .insert({
         user_id: user.id,
         client_name: clientName,
+        county,
         state,
         notes: notes || null,
         status: "draft",
@@ -151,6 +153,7 @@ export async function createCase(
 
     await logCaseEvent(supabase, user.id, caseRow.id, "case_created", "Case created", {
       client_name: clientName,
+      county,
       state,
     })
 
