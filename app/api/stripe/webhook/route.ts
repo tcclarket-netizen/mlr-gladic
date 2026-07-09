@@ -77,6 +77,16 @@ export async function POST(request: Request) {
   if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object as Stripe.Subscription
     const admin = createAdminClient()
+    const { data: billingRow } = await admin
+      .from("user_billing")
+      .select("plan_key")
+      .eq("stripe_subscription_id", sub.id)
+      .maybeSingle()
+
+    if (billingRow?.plan_key === "admin") {
+      return NextResponse.json({ received: true })
+    }
+
     await admin
       .from("user_billing")
       .update({

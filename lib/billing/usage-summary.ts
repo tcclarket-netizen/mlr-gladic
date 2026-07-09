@@ -1,7 +1,7 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { BillingPlanKey } from "@/lib/billing/plans"
-import { getPlanQuotas } from "@/lib/billing/plans"
+import { getPlanQuotas, isUnlimitedQuota } from "@/lib/billing/plans"
 import type { BillingProduct } from "@/lib/billing/products"
 import type { UserBilling } from "@/lib/billing/types"
 
@@ -82,11 +82,16 @@ export async function getUsageSummary(
     countProductUsage(supabase, userId, "self", startIso),
   ])
 
-  const toUsage = (used: number, limit: number): ProductUsage => ({
-    used,
-    limit,
-    remaining: Math.max(0, limit - used),
-  })
+  const toUsage = (used: number, limit: number): ProductUsage => {
+    if (isUnlimitedQuota(limit)) {
+      return { used, limit: Number.POSITIVE_INFINITY, remaining: Number.POSITIVE_INFINITY }
+    }
+    return {
+      used,
+      limit,
+      remaining: Math.max(0, limit - used),
+    }
+  }
 
   return {
     planKey,
@@ -114,6 +119,10 @@ export async function checkProductQuota(
       allowed: false,
       reason: `Your plan does not include ${product} unlocks. Choose a membership plan in Billing.`,
     }
+  }
+
+  if (isUnlimitedQuota(usage.limit)) {
+    return { allowed: true }
   }
 
   if (usage.remaining <= 0) {

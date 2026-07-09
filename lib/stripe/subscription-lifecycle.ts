@@ -90,7 +90,18 @@ export async function upsertUserBillingFromSubscription(subscription: Stripe.Sub
 
   if (!userId) return
 
+  const { data: existing } = await admin
+    .from("user_billing")
+    .select("plan_key")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  // Never let Stripe events overwrite the internal admin plan.
+  if (existing?.plan_key === "admin") return
+
   const period = getSubscriptionPeriodIso(subscription)
+  const nextPlanKey = getPlanByKey(planFromMeta ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY
+  if (nextPlanKey === "admin") return
 
   await admin.from("user_billing").upsert({
     user_id: userId,
@@ -100,7 +111,7 @@ export async function upsertUserBillingFromSubscription(subscription: Stripe.Sub
         : subscription.customer.id,
     stripe_subscription_id: subscription.id,
     stripe_price_id: subscription.items.data[0]?.price?.id ?? null,
-    plan_key: getPlanByKey(planFromMeta ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY,
+    plan_key: nextPlanKey,
     billing_status: mapSubscriptionBillingStatus(subscription.status),
     current_period_start: period.start,
     current_period_end: period.end,

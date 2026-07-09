@@ -21,6 +21,7 @@ import {
   BILLING_PRODUCT_UNLOCK_VERBS,
 } from "@/lib/billing/products"
 import { formatUnlockConfirmMessage } from "@/lib/billing/display"
+import { isUnlimitedQuota } from "@/lib/billing/plans"
 import type { ProductUsage } from "@/lib/billing/usage-summary"
 import { ProductQuotaBadge } from "@/components/billing/product-quota-badge"
 
@@ -48,7 +49,8 @@ export function UnlockProductButton({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const confirm = formatUnlockConfirmMessage(product, usage)
-  const canUnlock = usage.limit > 0 && usage.remaining > 0
+  const unlimited = isUnlimitedQuota(usage.limit)
+  const canUnlock = unlimited || (usage.limit > 0 && usage.remaining > 0)
 
   const handleUnlock = async () => {
     setError(null)
@@ -103,7 +105,7 @@ export function UnlockProductButton({
   return (
     <div className={className}>
       <ProductQuotaBadge product={product} usage={usage} />
-      {usage.remaining <= 0 ? (
+      {!unlimited && usage.remaining <= 0 ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-muted-foreground">
             No unlocks left this billing period. Upgrade or wait for your next renewal.

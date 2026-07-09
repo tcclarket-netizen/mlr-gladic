@@ -1,11 +1,21 @@
 import { CheckCircle, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { BILLING_PLANS, FREE_TRIAL_OFFERING, getPlanByKey } from "@/lib/billing/plans"
+import { isAdminEmail } from "@/lib/billing/admin"
+import {
+  FREE_TRIAL_OFFERING,
+  getPlanByKey,
+  getPublicBillingPlans,
+  isUnlimitedQuota,
+} from "@/lib/billing/plans"
 import { BILLING_PRODUCT_LABELS } from "@/lib/billing/products"
 import { getUserBilling } from "@/lib/billing/queries"
 import { getUsageSummary } from "@/lib/billing/usage-summary"
-import { BillingActions, PlanCheckoutButton } from "@/components/billing/billing-actions"
+import {
+  ActivateAdminPlanButton,
+  BillingActions,
+  PlanCheckoutButton,
+} from "@/components/billing/billing-actions"
 import { FreeTrialPlanCard } from "@/components/billing/free-trial-plan-card"
 import { createClient } from "@/lib/supabase/server"
 import { getStripeClient } from "@/lib/stripe/config"
@@ -19,7 +29,8 @@ type PaymentHistoryItem = {
   reference_id: string | null
 }
 
-function formatPeriodEnd(iso: string | null) {
+function formatPeriodEnd(iso: string | null, planKey?: string) {
+  if (planKey === "admin") return "Internal unlimited access"
   if (!iso) return "No active membership period"
   return `Renews ${new Date(iso).toLocaleDateString("en-US", {
     month: "long",
@@ -78,6 +89,11 @@ export default async function BillingPage() {
   const planKey = billing?.plan_key ?? "none"
   const isFreeTrial = planKey === "none"
   const currentPlan = isFreeTrial ? null : getPlanByKey(planKey)
+  const showAdminPlan = isAdminEmail(user?.email)
+  const visiblePlans = [
+    ...getPublicBillingPlans(),
+    ...(showAdminPlan ? [getPlanByKey("admin")].filter(Boolean) : []),
+  ]
 
   const usageItems = usage
     ? [
@@ -118,7 +134,8 @@ export default async function BillingPage() {
                   {isFreeTrial ? FREE_TRIAL_OFFERING.name : currentPlan?.name ?? "No membership"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Status: {billing?.billing_status ?? "none"} · {formatPeriodEnd(billing?.current_period_end ?? null)}
+                  Status: {billing?.billing_status ?? "none"} ·{" "}
+                  {formatPeriodEnd(billing?.current_period_end ?? null, planKey)}
                 </p>
               </div>
             </div>
@@ -131,15 +148,23 @@ export default async function BillingPage() {
           <h2 className="mb-4 text-sm font-semibold text-foreground">This Period&apos;s Unlocks</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {usageItems.map(({ label, used, limit, remaining }) => {
-              const pct = limit > 0 ? Math.round((used / limit) * 100) : null
+              const unlimited = isUnlimitedQuota(limit)
+              const pct =
+                unlimited || limit <= 0 ? null : Math.round((used / limit) * 100)
               return (
                 <div key={label} className="rounded-lg border border-border bg-card p-4">
                   <p className="text-xs text-muted-foreground">{label}</p>
                   <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
-                    {remaining}{" "}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      of {limit} remaining
-                    </span>
+                    {unlimited ? (
+                      "Unlimited"
+                    ) : (
+                      <>
+                        {remaining}{" "}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          of {limit} remaining
+                        </span>
+                      </>
+                    )}
                   </p>
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
                     <div
@@ -147,15 +172,21 @@ export default async function BillingPage() {
                         "h-full rounded-full transition-all",
                         pct != null && pct > 80 ? "bg-status-warning" : "bg-accent"
                       )}
-                      style={{ width: `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%` }}
+                      style={{
+                        width: unlimited
+                          ? "100%"
+                          : `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`,
+                      }}
                     />
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {limit <= 0
                       ? "Not included on current plan"
-                      : isFreeTrial && label === BILLING_PRODUCT_LABELS.opposition
-                        ? `${used} used (1 free unlock total)`
-                        : `${used} used this period`}
+                      : unlimited
+                        ? `${used} unlocked this period`
+                        : isFreeTrial && label === BILLING_PRODUCT_LABELS.opposition
+                          ? `${used} used (1 free unlock total)`
+                          : `${used} used this period`}
                   </p>
                 </div>
               )
@@ -214,21 +245,32 @@ export default async function BillingPage() {
             isCurrent={isFreeTrial}
             oppositionRemaining={usage?.opposition.remaining}
           />
-          {BILLING_PLANS.map((plan) => {
+          {visiblePlans.map((plan) => {
+            if (!plan) return null
             const isCurrent = billing?.plan_key === plan.key
+            const isAdminOnly = Boolean(plan.adminOnly)
             return (
               <div
                 key={plan.key}
                 className={cn(
                   "flex flex-col rounded-lg border bg-card",
                   isCurrent ? "border-primary ring-1 ring-primary/20" : "border-border",
-                  plan.popular && !isCurrent && "border-accent/40"
+                  plan.popular && !isCurrent && "border-accent/40",
+                  isAdminOnly && !isCurrent && "border-dashed border-primary/40"
                 )}
               >
                 <div className="border-b border-border p-5">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="text-sm font-semibold text-foreground">{plan.name}</h3>
                     <div className="flex items-center gap-1.5">
+                      {isAdminOnly ? (
+                        <Badge
+                          variant="outline"
+                          className="border-primary/30 bg-primary/5 text-[10px] text-primary"
+                        >
+                          Admin only
+                        </Badge>
+                      ) : null}
                       {plan.popular && !isCurrent ? (
                         <Badge
                           variant="outline"
@@ -251,7 +293,9 @@ export default async function BillingPage() {
                     <span className="text-2xl font-semibold tracking-tight text-foreground">
                       {plan.monthlyPriceLabel}
                     </span>
-                    <span className="text-xs text-muted-foreground">/ month</span>
+                    {!isAdminOnly ? (
+                      <span className="text-xs text-muted-foreground">/ month</span>
+                    ) : null}
                   </div>
                   {plan.annualPriceLabel ? (
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -273,20 +317,29 @@ export default async function BillingPage() {
                   </ul>
                 </div>
                 <div className="space-y-2 p-5 pt-0">
-                  <PlanCheckoutButton
-                    planKey={plan.key}
-                    interval="month"
-                    disabled={isCurrent}
-                    label={isCurrent ? "Current Plan" : "Subscribe monthly"}
-                  />
-                  {plan.annualPriceLabel ? (
-                    <PlanCheckoutButton
-                      planKey={plan.key}
-                      interval="year"
+                  {isAdminOnly ? (
+                    <ActivateAdminPlanButton
                       disabled={isCurrent}
-                      label={isCurrent ? "Current Plan" : "Subscribe annually"}
+                      label={isCurrent ? "Current Plan" : "Activate admin access"}
                     />
-                  ) : null}
+                  ) : (
+                    <>
+                      <PlanCheckoutButton
+                        planKey={plan.key}
+                        interval="month"
+                        disabled={isCurrent}
+                        label={isCurrent ? "Current Plan" : "Subscribe monthly"}
+                      />
+                      {plan.annualPriceLabel ? (
+                        <PlanCheckoutButton
+                          planKey={plan.key}
+                          interval="year"
+                          disabled={isCurrent}
+                          label={isCurrent ? "Current Plan" : "Subscribe annually"}
+                        />
+                      ) : null}
+                    </>
+                  )}
                 </div>
               </div>
             )

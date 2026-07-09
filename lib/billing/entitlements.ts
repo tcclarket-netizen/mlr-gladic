@@ -1,5 +1,5 @@
 import type { UserBilling } from "@/lib/billing/types"
-import { isPaidPlan } from "@/lib/billing/plans"
+import { isAdminPlan, isPaidPlan } from "@/lib/billing/plans"
 
 export type ProcessingEntitlement = {
   allowed: boolean
@@ -12,6 +12,10 @@ export function getMembershipEntitlement(
   billing: Pick<UserBilling, "plan_key" | "billing_status"> | null
 ): ProcessingEntitlement {
   if (!billing || billing.plan_key === "none") {
+    return { allowed: true }
+  }
+
+  if (isAdminPlan(billing.plan_key)) {
     return { allowed: true }
   }
 

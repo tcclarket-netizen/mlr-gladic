@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const plan = body.planKey ? getPlanByKey(body.planKey) : undefined
   const interval: BillingInterval = body.interval === "year" ? "year" : "month"
 
-  if (!plan || plan.key === "none") {
+  if (!plan || plan.key === "none" || plan.adminOnly) {
     return NextResponse.json({ error: "Invalid plan selection." }, { status: 400 })
   }
 

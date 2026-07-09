@@ -6,6 +6,7 @@ export type BillingPlanKey =
   | "accuracy"
   | "dispute"
   | "resolute"
+  | "admin"
 
 export type BillingInterval = "month" | "year"
 
@@ -14,6 +15,9 @@ export type PlanQuotas = {
   legal: number
   self: number
 }
+
+/** Sentinel for unlimited unlocks (admin plan). */
+export const UNLIMITED_QUOTA = Number.POSITIVE_INFINITY
 
 type BillingPlan = {
   key: BillingPlanKey
@@ -28,6 +32,8 @@ type BillingPlan = {
   }
   features: string[]
   popular?: boolean
+  /** Hidden from normal users; activate via admin-only flow (no Stripe). */
+  adminOnly?: boolean
 }
 
 export const BILLING_PLANS: BillingPlan[] = [
@@ -141,6 +147,28 @@ export const BILLING_PLANS: BillingPlan[] = [
       "Dedicated support",
     ],
   },
+  {
+    key: "admin",
+    name: "Admin",
+    monthlyPriceLabel: "Internal",
+    annualPriceLabel: null,
+    description: "Internal unlimited access for GLADIC AI admins. Not billed via Stripe.",
+    quotas: {
+      opposition: UNLIMITED_QUOTA,
+      legal: UNLIMITED_QUOTA,
+      self: UNLIMITED_QUOTA,
+    },
+    envPriceKeys: {},
+    features: [
+      "Unlimited cases",
+      "Unlimited Opposition Report™ unlocks",
+      "Unlimited MY LEGAL REPORT™ unlocks",
+      "Unlimited MY SELF REPORT™ unlocks",
+      "Priority processing",
+      "Admin-only — not available to customers",
+    ],
+    adminOnly: true,
+  },
 ]
 
 export const NO_MEMBERSHIP_PLAN_KEY: BillingPlanKey = "none"
@@ -193,6 +221,14 @@ export function getPlanByKey(key: string) {
   return BILLING_PLANS.find((p) => p.key === key)
 }
 
+export function getPublicBillingPlans() {
+  return BILLING_PLANS.filter((plan) => !plan.adminOnly)
+}
+
+export function isUnlimitedQuota(limit: number) {
+  return !Number.isFinite(limit) || limit >= UNLIMITED_QUOTA
+}
+
 export function getPlanQuotas(planKey: BillingPlanKey): PlanQuotas {
   if (planKey === "none") return FREE_TRIAL_QUOTAS
   return getPlanByKey(planKey)?.quotas ?? NO_MEMBERSHIP_QUOTAS
@@ -202,9 +238,9 @@ export function getStripePriceIdForPlan(
   planKey: BillingPlanKey,
   interval: BillingInterval
 ): string | null {
-  if (planKey === "none") return null
+  if (planKey === "none" || planKey === "admin") return null
   const plan = getPlanByKey(planKey)
-  if (!plan) return null
+  if (!plan || plan.adminOnly) return null
   const envKey = interval === "year" ? plan.envPriceKeys.annual : plan.envPriceKeys.monthly
   if (!envKey) return null
   return process.env[envKey] ?? null
@@ -212,4 +248,8 @@ export function getStripePriceIdForPlan(
 
 export function isPaidPlan(planKey: BillingPlanKey) {
   return planKey !== "none"
+}
+
+export function isAdminPlan(planKey: BillingPlanKey) {
+  return planKey === "admin"
 }

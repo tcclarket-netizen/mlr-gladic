@@ -112,3 +112,51 @@ export function PlanCheckoutButton({
     </div>
   )
 }
+
+export function ActivateAdminPlanButton({
+  disabled,
+  label = "Activate admin access",
+}: {
+  disabled?: boolean
+  label?: string
+}) {
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleActivate = async () => {
+    setError(null)
+    setPending(true)
+    try {
+      const res = await fetch("/api/billing/activate-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      const data = (await res.json()) as { success?: boolean; error?: string }
+      if (!res.ok || !data.success) {
+        setError(data.error ?? "Unable to activate admin plan.")
+        return
+      }
+      window.location.href = "/billing?plan=admin"
+    } catch {
+      setError("Unable to activate admin plan.")
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div>
+      <Button className="w-full" size="sm" disabled={disabled || pending} onClick={handleActivate}>
+        {pending ? (
+          <>
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            Activating…
+          </>
+        ) : (
+          label
+        )}
+      </Button>
+      {error ? <p className="mt-1 text-[11px] text-destructive">{error}</p> : null}
+    </div>
+  )
+}
