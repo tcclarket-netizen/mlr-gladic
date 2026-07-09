@@ -3,34 +3,29 @@
 import { useState } from "react"
 import { CreditCard, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { BillingInterval, BillingPlanKey } from "@/lib/billing/plans"
 
 type Props = {
-  selectedPlanKey: string | null
   hasCustomerPortal: boolean
-  showCheckout?: boolean
 }
 
-export function BillingActions({
-  selectedPlanKey,
-  hasCustomerPortal,
-  showCheckout = true,
-}: Props) {
-  const [pendingAction, setPendingAction] = useState<"checkout" | "portal" | null>(null)
+export function BillingActions({ hasCustomerPortal }: Props) {
+  const [pendingAction, setPendingAction] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const runAction = async (path: string, body: Record<string, unknown>, action: "checkout" | "portal") => {
+  const openPortal = async () => {
     setError(null)
-    setPendingAction(action)
+    setPendingAction(true)
     try {
-      const res = await fetch(path, {
+      const res = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({}),
       })
 
       const data = (await res.json()) as { url?: string; error?: string }
       if (!res.ok || !data.url) {
-        setError(data.error ?? "Unable to start billing flow.")
+        setError(data.error ?? "Unable to open billing portal.")
         return
       }
 
@@ -38,42 +33,28 @@ export function BillingActions({
     } catch {
       setError("Unable to connect to billing. Please try again.")
     } finally {
-      setPendingAction(null)
+      setPendingAction(false)
     }
   }
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => runAction("/api/stripe/portal", {}, "portal")}
-          disabled={!hasCustomerPortal || pendingAction !== null}
-        >
-          {pendingAction === "portal" ? (
-            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Opening…</>
-          ) : (
-            <><CreditCard className="mr-1.5 h-3.5 w-3.5" /> Manage Payment</>
-          )}
-        </Button>
-
-        {showCheckout ? (
-          <Button
-            size="sm"
-            onClick={() =>
-              runAction(
-                "/api/stripe/checkout",
-                { planKey: selectedPlanKey ?? "consultant" },
-                "checkout"
-              )
-            }
-            disabled={!selectedPlanKey || pendingAction !== null}
-          >
-            {pendingAction === "checkout" ? "Starting checkout…" : "Upgrade / Change Plan"}
-          </Button>
-        ) : null}
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={openPortal}
+        disabled={!hasCustomerPortal || pendingAction}
+      >
+        {pendingAction ? (
+          <>
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Opening…
+          </>
+        ) : (
+          <>
+            <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Manage Payment
+          </>
+        )}
+      </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
@@ -81,10 +62,12 @@ export function BillingActions({
 
 export function PlanCheckoutButton({
   planKey,
+  interval = "month",
   disabled,
   label,
 }: {
-  planKey: string
+  planKey: BillingPlanKey
+  interval?: BillingInterval
   disabled?: boolean
   label: string
 }) {
@@ -98,7 +81,7 @@ export function PlanCheckoutButton({
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planKey }),
+        body: JSON.stringify({ planKey, interval }),
       })
       const data = (await res.json()) as { url?: string; error?: string }
       if (!res.ok || !data.url) {

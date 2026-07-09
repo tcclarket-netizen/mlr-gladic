@@ -6,6 +6,7 @@ import { ProfileSettingsForm } from "@/components/settings/profile-settings-form
 import { SecuritySettingsForm } from "@/components/settings/security-settings-form"
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/profile"
 import { getUserBilling } from "@/lib/billing/queries"
+import { getPlanByKey, FREE_TRIAL_OFFERING } from "@/lib/billing/plans"
 import { ACCOUNT_TYPE_LABELS } from "@/types/profile"
 
 function formatStatus(status: string | null | undefined) {
@@ -19,6 +20,8 @@ export default async function SettingsPage() {
     getCurrentProfile(),
     getUserBilling(),
   ])
+  const planKey = billing?.plan_key ?? "none"
+  const currentPlan = planKey === "none" ? null : getPlanByKey(planKey)
 
   const fullName = profile?.full_name ?? user?.user_metadata?.full_name ?? ""
   const email = user?.email ?? ""
@@ -69,7 +72,10 @@ export default async function SettingsPage() {
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <p className="text-sm text-foreground">
-                  Current plan: <span className="font-medium">{billing?.plan_key ?? "free_trial"}</span>
+                  Current plan:{" "}
+                  <span className="font-medium">
+                    {planKey === "none" ? FREE_TRIAL_OFFERING.name : currentPlan?.name ?? "No membership"}
+                  </span>
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Status: {formatStatus(billing?.billing_status)}

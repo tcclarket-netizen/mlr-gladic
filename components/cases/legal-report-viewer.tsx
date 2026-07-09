@@ -8,12 +8,16 @@ import { caseReferenceCode } from "@/lib/cases/constants"
 import { formatCaseDate } from "@/lib/cases/display"
 import { sectionHeading } from "@/lib/report-generation/report-format"
 import type { GeneratedReport, LegalReportContent } from "@/types/legal-report"
+import { ProductQuotaBadge } from "@/components/billing/product-quota-badge"
+import type { ProductUsage } from "@/lib/billing/usage-summary"
 
 type LegalReportViewerProps = {
   caseId: string
   clientName: string
   caseState: string
   report: GeneratedReport
+  legalUsage?: ProductUsage
+  legalUnlocked?: boolean
 }
 
 function normalizeContent(content: LegalReportContent): LegalReportContent {
@@ -51,6 +55,8 @@ export function LegalReportViewer({
   clientName,
   caseState,
   report,
+  legalUsage,
+  legalUnlocked = true,
 }: LegalReportViewerProps) {
   const content = normalizeContent(report.content)
   const [activeSection, setActiveSection] = useState(content.sections[0]?.id ?? "1")
@@ -178,6 +184,13 @@ export function LegalReportViewer({
                   )}
                 </Button>
               </div>
+              {legalUsage ? (
+                <ProductQuotaBadge
+                  product="legal"
+                  usage={legalUsage}
+                  unlocked={legalUnlocked}
+                />
+              ) : null}
               {docError && <p className="text-xs text-destructive">{docError}</p>}
             </div>
           </div>

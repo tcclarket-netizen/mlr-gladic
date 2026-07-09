@@ -4,15 +4,26 @@ import { useState, useTransition } from "react"
 import { Download, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { caseReferenceCode } from "@/lib/cases/constants"
+import { UnlockProductButton } from "@/components/billing/unlock-product-button"
+import { ProductQuotaBadge } from "@/components/billing/product-quota-badge"
+import type { ProductUsage } from "@/lib/billing/usage-summary"
 import type { LegalReportContent } from "@/types/legal-report"
 
 type SelfReportTabProps = {
   caseId: string
   legalReportContent: LegalReportContent
   caseCounty?: string | null
+  selfUsage: ProductUsage
+  selfUnlocked: boolean
 }
 
-export function SelfReportTab({ caseId, legalReportContent, caseCounty }: SelfReportTabProps) {
+export function SelfReportTab({
+  caseId,
+  legalReportContent,
+  caseCounty,
+  selfUsage,
+  selfUnlocked,
+}: SelfReportTabProps) {
   const reference =
     legalReportContent.case_reference || caseReferenceCode(caseId)
   const [docError, setDocError] = useState<string | null>(null)
@@ -74,15 +85,28 @@ export function SelfReportTab({ caseId, legalReportContent, caseCounty }: SelfRe
             )}
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button onClick={handleDownloadDocx} disabled={docPending}>
-            {docPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            Download Self-Report (.docx)
-          </Button>
+        <div className="mt-4 space-y-3">
+          <ProductQuotaBadge product="self" usage={selfUsage} unlocked={selfUnlocked} />
+          {selfUnlocked ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={handleDownloadDocx} disabled={docPending}>
+                {docPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Download Self-Report (.docx)
+              </Button>
+            </div>
+          ) : (
+            <UnlockProductButton
+              caseId={caseId}
+              product="self"
+              usage={selfUsage}
+              unlocked={selfUnlocked}
+              size="sm"
+            />
+          )}
         </div>
         {docError && <p className="mt-3 text-xs text-destructive">{docError}</p>}
       </div>

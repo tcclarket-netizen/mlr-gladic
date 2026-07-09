@@ -14,13 +14,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { BUREAUS, caseReferenceCode } from "@/lib/cases/constants"
 import { caseStatusLabel, caseStatusStyles, formatCaseDate } from "@/lib/cases/display"
-import { CaseMetricsGrid } from "@/components/cases/case-metrics-grid"
+import { OppositionMetricsSection } from "@/components/cases/opposition-metrics-section"
 import { SelfReportTab } from "@/components/cases/self-report-tab"
+import { UnlockProductButton } from "@/components/billing/unlock-product-button"
+import { GatedContentOverlay } from "@/components/cases/gated-content-overlay"
+import type { CaseBillingContext } from "@/lib/billing/queries"
 import { VerificationBadge } from "@/components/cases/verification-badge"
 import type { CaseExtractionData } from "@/lib/cases/queries"
 import { EMPTY_METRICS } from "@/types/credit-report"
 
-type CaseDetailViewProps = CaseExtractionData
+type CaseDetailViewProps = CaseExtractionData & {
+  billingContext: CaseBillingContext
+}
 
 export function CaseDetailView({
   case: caseData,
@@ -29,6 +34,7 @@ export function CaseDetailView({
   inquiries,
   collections,
   legalReport,
+  billingContext,
 }: CaseDetailViewProps) {
   const reference = caseReferenceCode(caseData.id)
   const reportsByBureau = Object.fromEntries(
@@ -38,6 +44,10 @@ export function CaseDetailView({
   const hasExtraction = tradelines.length > 0
   const hasLegalReport = legalReport?.status === "ready"
   const displayMetrics = hasExtraction ? metrics : EMPTY_METRICS
+  const { usage, entitlements } = billingContext
+  const oppositionUnlocked = entitlements.opposition
+  const legalUnlocked = entitlements.legal
+  const selfUnlocked = entitlements.self
 
   const timeline = [
     { label: "Case created", date: formatCaseDate(caseData.created_at), done: true },
@@ -100,7 +110,7 @@ export function CaseDetailView({
                   <Upload className="mr-1.5 h-3.5 w-3.5" /> Upload Reports
                 </Link>
               </Button>
-              <Button size="sm" asChild disabled={!hasLegalReport}>
+              <Button size="sm" asChild disabled={!hasLegalReport || !legalUnlocked}>
                 <Link href={`/cases/${caseData.id}/report`}>
                   <FileText className="mr-1.5 h-3.5 w-3.5" /> MY LEGAL REPORT™
                 </Link>
@@ -219,7 +229,12 @@ export function CaseDetailView({
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Opposition Report™ Analysis
             </h2>
-            <CaseMetricsGrid metrics={displayMetrics} />
+            <OppositionMetricsSection
+              caseId={caseData.id}
+              metrics={displayMetrics}
+              unlocked={oppositionUnlocked}
+              oppositionUsage={usage.opposition}
+            />
           </div>
         )}
 
@@ -255,24 +270,51 @@ export function CaseDetailView({
               <div className="rounded-lg border border-border bg-card p-5">
                 <h3 className="text-sm font-semibold text-foreground">MY LEGAL REPORT™</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {hasLegalReport ? "Ready to view and download" : "Run processing to generate"}
+                  {!hasLegalReport
+                    ? "Run processing to generate"
+                    : legalUnlocked
+                      ? "Ready to view and download"
+                      : "Generated — unlock to view full report"}
                 </p>
-                {hasLegalReport && (
+                {hasLegalReport && legalUnlocked ? (
                   <Link
                     href={`/cases/${caseData.id}/report`}
                     className="mt-3 inline-flex text-xs text-accent hover:underline"
                   >
                     View full report →
                   </Link>
-                )}
+                ) : hasLegalReport ? (
+                  <div className="mt-3">
+                    <UnlockProductButton
+                      caseId={caseData.id}
+                      product="legal"
+                      usage={usage.legal}
+                      unlocked={legalUnlocked}
+                      size="sm"
+                    />
+                  </div>
+                ) : null}
               </div>
               <div className="rounded-lg border border-border bg-card p-5">
                 <h3 className="text-sm font-semibold text-foreground">MY SELF REPORT™</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {hasLegalReport
-                    ? "Pre-suit self-help package ready to download"
-                    : "Available after legal report is generated"}
+                  {!hasLegalReport
+                    ? "Available after legal report is generated"
+                    : selfUnlocked
+                      ? "Pre-suit self-help package ready to download"
+                      : "Generated — unlock to download"}
                 </p>
+                {hasLegalReport && !selfUnlocked ? (
+                  <div className="mt-3">
+                    <UnlockProductButton
+                      caseId={caseData.id}
+                      product="self"
+                      usage={usage.self}
+                      unlocked={selfUnlocked}
+                      size="sm"
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           </TabsContent>
@@ -396,20 +438,37 @@ export function CaseDetailView({
           <TabsContent value="legal-report">
             {legalReport?.content?.sections ? (
               <div className="space-y-4">
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  {legalReport.content.disclaimer}
-                </p>
-                {legalReport.content.sections.slice(0, 2).map((s) => (
-                  <div key={s.id} className="rounded-lg border border-border bg-card p-5">
-                    <h3 className="text-sm font-semibold text-foreground">{s.title}</h3>
-                    <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
-                      {s.body}
+                <GatedContentOverlay
+                  locked={!legalUnlocked}
+                  footer={
+                    <UnlockProductButton
+                      caseId={caseData.id}
+                      product="legal"
+                      usage={usage.legal}
+                      unlocked={legalUnlocked}
+                      size="sm"
+                    />
+                  }
+                >
+                  <div className="space-y-4">
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      {legalReport.content.disclaimer}
                     </p>
+                    {legalReport.content.sections.slice(0, 2).map((s) => (
+                      <div key={s.id} className="rounded-lg border border-border bg-card p-5">
+                        <h3 className="text-sm font-semibold text-foreground">{s.title}</h3>
+                        <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
+                          {s.body}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                <Button asChild>
-                  <Link href={`/cases/${caseData.id}/report`}>View Full Report</Link>
-                </Button>
+                </GatedContentOverlay>
+                {legalUnlocked ? (
+                  <Button asChild>
+                    <Link href={`/cases/${caseData.id}/report`}>View Full Report</Link>
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </TabsContent>
@@ -420,6 +479,8 @@ export function CaseDetailView({
                 caseId={caseData.id}
                 legalReportContent={legalReport.content}
                 caseCounty={caseData.county}
+                selfUsage={usage.self}
+                selfUnlocked={selfUnlocked}
               />
             ) : null}
           </TabsContent>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getPlanByKey } from "@/lib/billing/plans"
+import { getPlanByKey, NO_MEMBERSHIP_PLAN_KEY } from "@/lib/billing/plans"
 import { getStripeClient, getStripeWebhookSecret } from "@/lib/stripe/config"
 
 export const runtime = "nodejs"
@@ -17,31 +17,6 @@ function subscriptionStatus(status: Stripe.Subscription.Status) {
   return "none"
 }
 
-async function cancelExistingSubscriptionForUser(userId: string, stripe: Stripe) {
-  const admin = createAdminClient()
-  const { data: billing } = await admin
-    .from("user_billing")
-    .select("stripe_subscription_id")
-    .eq("user_id", userId)
-    .maybeSingle()
-
-  const subscriptionId = billing?.stripe_subscription_id
-  if (!subscriptionId) return
-
-  try {
-    const existing = await stripe.subscriptions.retrieve(subscriptionId)
-    if (existing.status !== "canceled") {
-      await stripe.subscriptions.cancel(subscriptionId)
-    }
-  } catch (error) {
-    const stripeError = error as Stripe.errors.StripeError
-    // If the subscription is already gone/canceled, continue billing sync.
-    if (stripeError?.code !== "resource_missing") {
-      throw error
-    }
-  }
-}
-
 async function upsertFromSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient()
   const planFromMeta = subscription.metadata?.plan_key
@@ -55,8 +30,9 @@ async function upsertFromSubscription(subscription: Stripe.Subscription) {
       typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
     stripe_subscription_id: subscription.id,
     stripe_price_id: subscription.items.data[0]?.price?.id ?? null,
-    plan_key: getPlanByKey(planFromMeta ?? "")?.key ?? "consultant",
+    plan_key: getPlanByKey(planFromMeta ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY,
     billing_status: subscriptionStatus(subscription.status),
+    current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     cancel_at_period_end: subscription.cancel_at_period_end,
     updated_at: new Date().toISOString(),
@@ -83,9 +59,9 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
 
     const userId = session.metadata?.user_id
-    const planKey = getPlanByKey(session.metadata?.plan_key ?? "")?.key ?? "pay_per_report"
+    const planKey = getPlanByKey(session.metadata?.plan_key ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY
 
-    if (userId) {
+    if (userId && session.mode === "subscription") {
       const customerId =
         typeof session.customer === "string" ? session.customer : session.customer?.id ?? null
       const subscriptionId =
@@ -93,39 +69,14 @@ export async function POST(request: Request) {
           ? session.subscription
           : session.subscription?.id ?? null
 
-      if (planKey === "pay_per_report") {
-        if (session.mode === "setup" && typeof session.setup_intent === "string") {
-          await cancelExistingSubscriptionForUser(userId, stripe)
-
-          const setupIntent = await stripe.setupIntents.retrieve(session.setup_intent)
-          const paymentMethodId =
-            typeof setupIntent.payment_method === "string"
-              ? setupIntent.payment_method
-              : setupIntent.payment_method?.id ?? null
-
-          await admin.from("user_billing").upsert({
-            user_id: userId,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: null,
-            stripe_price_id: null,
-            stripe_default_payment_method_id: paymentMethodId,
-            plan_key: "pay_per_report",
-            billing_status: "active",
-            current_period_end: null,
-            cancel_at_period_end: false,
-            updated_at: new Date().toISOString(),
-          })
-        }
-      } else {
-        await admin.from("user_billing").upsert({
-          user_id: userId,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-          plan_key: planKey,
-          billing_status: session.mode === "subscription" ? "active" : "one_time_paid",
-          updated_at: new Date().toISOString(),
-        })
-      }
+      await admin.from("user_billing").upsert({
+        user_id: userId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        plan_key: planKey,
+        billing_status: "active",
+        updated_at: new Date().toISOString(),
+      })
     }
 
     if (session.mode === "subscription" && typeof session.subscription === "string") {
@@ -144,7 +95,12 @@ export async function POST(request: Request) {
     await admin
       .from("user_billing")
       .update({
+        plan_key: NO_MEMBERSHIP_PLAN_KEY,
         billing_status: "canceled",
+        stripe_subscription_id: null,
+        stripe_price_id: null,
+        current_period_start: null,
+        current_period_end: null,
         cancel_at_period_end: false,
         updated_at: new Date().toISOString(),
       })

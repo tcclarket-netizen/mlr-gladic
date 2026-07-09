@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { caseReferenceCode } from "@/lib/cases/constants"
 import { generateLegalReportDocx } from "@/lib/report-generation/legal-report-docx"
-import { getExportEntitlement } from "@/lib/billing/entitlements"
+import { getMembershipEntitlement } from "@/lib/billing/entitlements"
+import { isCaseProductUnlocked } from "@/lib/billing/case-entitlements"
 import type { LegalReportContent } from "@/types/legal-report"
 
 export const runtime = "nodejs"
@@ -23,14 +24,22 @@ export async function GET(
 
   const { data: billing } = await supabase
     .from("user_billing")
-    .select("plan_key, billing_status, stripe_default_payment_method_id")
+    .select("plan_key, billing_status, current_period_start, current_period_end")
     .eq("user_id", user.id)
     .maybeSingle()
 
-  const entitlement = getExportEntitlement(billing)
-  if (!entitlement.allowed) {
+  const membership = getMembershipEntitlement(billing)
+  if (!membership.allowed) {
     return NextResponse.json(
-      { error: entitlement.reason ?? "Your plan does not allow report exports." },
+      { error: membership.reason ?? "Your membership is not active." },
+      { status: 402 }
+    )
+  }
+
+  const unlocked = await isCaseProductUnlocked(supabase, user.id, caseId, "legal", billing)
+  if (!unlocked) {
+    return NextResponse.json(
+      { error: "Unlock MY LEGAL REPORT™ for this case before downloading." },
       { status: 402 }
     )
   }

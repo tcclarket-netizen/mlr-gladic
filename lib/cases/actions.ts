@@ -8,8 +8,6 @@ import {
   getCaseCreationEntitlement,
   getUploadEntitlement,
 } from "@/lib/billing/entitlements"
-import { checkMonthlyCaseQuota } from "@/lib/billing/usage-limits"
-import type { BillingPlanKey } from "@/lib/billing/plans"
 import type { AccountType } from "@/types/profile"
 import type { Bureau } from "@/types/case"
 
@@ -110,20 +108,6 @@ export async function createCase(
     if (!entitlement.allowed) {
       return { error: entitlement.reason ?? "Your plan does not allow creating cases." }
     }
-    const { data: billing } = await supabase
-      .from("user_billing")
-      .select("plan_key")
-      .eq("user_id", user.id)
-      .maybeSingle()
-    const quota = await checkMonthlyCaseQuota(
-      supabase,
-      user.id,
-      (billing?.plan_key as BillingPlanKey | undefined) ?? "free_trial"
-    )
-    if (!quota.allowed) {
-      return { error: quota.reason }
-    }
-
     const clientName = String(formData.get("clientName") ?? "").trim()
     const county = String(formData.get("county") ?? "").trim()
     const state = String(formData.get("state") ?? "").trim()

@@ -1,23 +1,36 @@
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
-import { getPlanByKey, getStripePriceIdForPlan, type BillingPlanKey } from "@/lib/billing/plans"
+import {
+  getPlanByKey,
+  getStripePriceIdForPlan,
+  type BillingInterval,
+  type BillingPlanKey,
+} from "@/lib/billing/plans"
 import { getStripeClient } from "@/lib/stripe/config"
 
 export const runtime = "nodejs"
 
-type Body = { planKey?: BillingPlanKey }
+type Body = {
+  planKey?: BillingPlanKey
+  interval?: BillingInterval
+}
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Body
   const plan = body.planKey ? getPlanByKey(body.planKey) : undefined
-  if (!plan || plan.key === "free_trial") {
+  const interval: BillingInterval = body.interval === "year" ? "year" : "month"
+
+  if (!plan || plan.key === "none") {
     return NextResponse.json({ error: "Invalid plan selection." }, { status: 400 })
   }
 
-  const priceId = plan.mode !== "setup" ? getStripePriceIdForPlan(plan.key) : null
-  if (plan.mode !== "setup" && !priceId) {
-    return NextResponse.json({ error: `Missing Stripe price mapping for ${plan.key}.` }, { status: 500 })
+  const priceId = getStripePriceIdForPlan(plan.key, interval)
+  if (!priceId) {
+    return NextResponse.json(
+      { error: `Missing Stripe price mapping for ${plan.key} (${interval}).` },
+      { status: 500 }
+    )
   }
 
   const supabase = await createClient()
@@ -46,7 +59,7 @@ export async function POST(request: Request) {
     await supabase.from("user_billing").upsert({
       user_id: user.id,
       stripe_customer_id: customerId,
-      plan_key: "free_trial",
+      plan_key: "none",
       billing_status: "none",
       updated_at: new Date().toISOString(),
     })
@@ -54,30 +67,26 @@ export async function POST(request: Request) {
 
   const hdrs = await headers()
   const origin = process.env.NEXT_PUBLIC_SITE_URL || hdrs.get("origin") || "http://localhost:3000"
-  const setupCurrency = (process.env.STRIPE_PAY_PER_REPORT_CURRENCY ?? "usd").toLowerCase()
 
   const session = await stripe.checkout.sessions.create({
-    mode: plan.mode,
+    mode: "subscription",
     customer: customerId,
-    ...(priceId ? { line_items: [{ price: priceId, quantity: 1 }] } : {}),
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/billing?checkout=success`,
     cancel_url: `${origin}/billing?checkout=cancel`,
-    ...(plan.mode !== "setup" ? { allow_promotion_codes: true } : {}),
+    allow_promotion_codes: true,
     metadata: {
       user_id: user.id,
       plan_key: plan.key,
+      billing_interval: interval,
     },
-    ...(plan.mode === "subscription"
-      ? { subscription_data: { metadata: { user_id: user.id, plan_key: plan.key } } }
-      : {}),
-    ...(plan.mode === "setup"
-      ? {
-          currency: setupCurrency,
-          setup_intent_data: {
-            metadata: { user_id: user.id, plan_key: plan.key },
-          },
-        }
-      : {}),
+    subscription_data: {
+      metadata: {
+        user_id: user.id,
+        plan_key: plan.key,
+        billing_interval: interval,
+      },
+    },
   })
 
   return NextResponse.json({ url: session.url })

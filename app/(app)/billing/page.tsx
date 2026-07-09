@@ -1,24 +1,18 @@
 import { CheckCircle, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { BILLING_PLANS } from "@/lib/billing/plans"
+import { BILLING_PLANS, FREE_TRIAL_OFFERING, getPlanByKey } from "@/lib/billing/plans"
+import { BILLING_PRODUCT_LABELS } from "@/lib/billing/products"
 import { getUserBilling } from "@/lib/billing/queries"
+import { getUsageSummary } from "@/lib/billing/usage-summary"
 import { BillingActions, PlanCheckoutButton } from "@/components/billing/billing-actions"
+import { FreeTrialPlanCard } from "@/components/billing/free-trial-plan-card"
 import { createClient } from "@/lib/supabase/server"
 import { getStripeClient } from "@/lib/stripe/config"
-
-type UsageItem = {
-  label: string
-  used: number
-  limit: number | null
-  unit: string
-  hint: string
-}
 
 type PaymentHistoryItem = {
   id: string
   paid_at: string
-  source: "pay_per_report" | "subscription"
   description: string
   charged_amount_cents: number
   currency: string
@@ -26,72 +20,12 @@ type PaymentHistoryItem = {
 }
 
 function formatPeriodEnd(iso: string | null) {
-  if (!iso) return "No renewal date yet"
+  if (!iso) return "No active membership period"
   return `Renews ${new Date(iso).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
   })}`
-}
-
-function buildUsageItems(planKey: string | undefined, reportsChargedCount: number): UsageItem[] {
-  if (planKey === "pay_per_report") {
-    return [
-      {
-        label: "Reports Charged",
-        used: reportsChargedCount,
-        limit: null,
-        unit: "",
-        hint: "Billed automatically per completed report",
-      },
-      {
-        label: "Cases",
-        used: 0,
-        limit: null,
-        unit: "",
-        hint: "No fixed monthly cap on case count",
-      },
-      {
-        label: "Storage",
-        used: 0,
-        limit: 1024,
-        unit: "MB",
-        hint: "Soft operational limit",
-      },
-      {
-        label: "Downloads",
-        used: 0,
-        limit: 100,
-        unit: "",
-        hint: "Monthly export guidance",
-      },
-    ]
-  }
-
-  if (planKey === "agency") {
-    return [
-      { label: "Cases", used: 0, limit: null, unit: "", hint: "Unlimited on Agency plan" },
-      { label: "Reports Generated", used: 0, limit: null, unit: "", hint: "Unlimited on Agency plan" },
-      { label: "Storage", used: 0, limit: 10240, unit: "MB", hint: "Expanded storage tier" },
-      { label: "Downloads", used: 0, limit: null, unit: "", hint: "Unlimited exports" },
-    ]
-  }
-
-  if (planKey === "consultant") {
-    return [
-      { label: "Cases", used: 0, limit: 25, unit: "", hint: "Monthly case allowance" },
-      { label: "Reports Generated", used: 0, limit: 50, unit: "", hint: "Monthly report allowance" },
-      { label: "Storage", used: 0, limit: 2048, unit: "MB", hint: "Standard consultant tier" },
-      { label: "Downloads", used: 0, limit: 200, unit: "", hint: "Monthly export allowance" },
-    ]
-  }
-
-  return [
-    { label: "Cases", used: 0, limit: 1, unit: "", hint: "Free trial allowance" },
-    { label: "Reports Generated", used: 0, limit: 1, unit: "", hint: "Preview generation only" },
-    { label: "Storage", used: 0, limit: 256, unit: "MB", hint: "Trial storage limit" },
-    { label: "Downloads", used: 0, limit: 5, unit: "", hint: "Limited trial exports" },
-  ]
 }
 
 async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
@@ -101,74 +35,66 @@ async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data: rows } = await supabase
-    .from("generated_reports")
-    .select("id, generated_at, case_id, charged_amount_cents, stripe_payment_intent_id")
-    .eq("user_id", user.id)
-    .eq("report_type", "legal_report")
-    .eq("status", "ready")
-    .not("charged_amount_cents", "is", null)
-    .order("generated_at", { ascending: false })
-    .limit(20)
-
-  if (!rows?.length) return []
-
-  const caseIds = [...new Set(rows.map((row) => row.case_id))]
-  const { data: cases } = await supabase.from("cases").select("id, client_name").in("id", caseIds)
-  const caseNameById = new Map((cases ?? []).map((c) => [c.id, c.client_name]))
-  const payPerReportItems: PaymentHistoryItem[] = rows.map((row) => ({
-    id: `ppr_${row.id}`,
-    paid_at: row.generated_at,
-    source: "pay_per_report",
-    description: `Report charge${caseNameById.get(row.case_id) ? ` - ${caseNameById.get(row.case_id)}` : ""}`,
-    charged_amount_cents: row.charged_amount_cents ?? 0,
-    currency: (process.env.STRIPE_PAY_PER_REPORT_CURRENCY ?? "usd").toUpperCase(),
-    reference_id: row.stripe_payment_intent_id ?? null,
-  }))
-
   const { data: billing } = await supabase
     .from("user_billing")
     .select("stripe_customer_id")
     .eq("user_id", user.id)
     .maybeSingle()
 
-  let subscriptionItems: PaymentHistoryItem[] = []
-  if (billing?.stripe_customer_id) {
-    try {
-      const stripe = getStripeClient()
-      const invoices = await stripe.invoices.list({
-        customer: billing.stripe_customer_id,
-        limit: 20,
-        status: "paid",
-      })
+  if (!billing?.stripe_customer_id) return []
 
-      subscriptionItems = invoices.data
-        .filter((inv) => inv.status === "paid" && (inv.amount_paid ?? 0) > 0)
-        .map((inv) => ({
-          id: `sub_${inv.id}`,
-          paid_at: new Date((inv.status_transitions.paid_at ?? inv.created) * 1000).toISOString(),
-          source: "subscription",
-          description: inv.description ?? inv.lines.data[0]?.description ?? "Subscription payment",
-          charged_amount_cents: inv.amount_paid ?? 0,
-          currency: (inv.currency ?? "usd").toUpperCase(),
-          reference_id: inv.id,
-        }))
-    } catch {
-      // Do not break billing page if Stripe is temporarily unavailable.
-      subscriptionItems = []
-    }
+  try {
+    const stripe = getStripeClient()
+    const invoices = await stripe.invoices.list({
+      customer: billing.stripe_customer_id,
+      limit: 20,
+      status: "paid",
+    })
+
+    return invoices.data
+      .filter((inv) => inv.status === "paid" && (inv.amount_paid ?? 0) > 0)
+      .map((inv) => ({
+        id: `sub_${inv.id}`,
+        paid_at: new Date((inv.status_transitions.paid_at ?? inv.created) * 1000).toISOString(),
+        description: inv.description ?? inv.lines.data[0]?.description ?? "Membership payment",
+        charged_amount_cents: inv.amount_paid ?? 0,
+        currency: (inv.currency ?? "usd").toUpperCase(),
+        reference_id: inv.id,
+      }))
+      .sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
+  } catch {
+    return []
   }
-
-  return [...payPerReportItems, ...subscriptionItems].sort(
-    (a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime()
-  )
 }
 
 export default async function BillingPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const [billing, paymentHistory] = await Promise.all([getUserBilling(), getPaymentHistory()])
-  const currentPlan = BILLING_PLANS.find((p) => p.key === (billing?.plan_key ?? "free_trial"))
-  const selectedPlanForCheckout = currentPlan?.key === "free_trial" ? "consultant" : currentPlan?.key ?? null
-  const usageItems = buildUsageItems(billing?.plan_key, billing?.reports_charged_count ?? 0)
+  const usage = user ? await getUsageSummary(supabase, user.id, billing) : null
+  const planKey = billing?.plan_key ?? "none"
+  const isFreeTrial = planKey === "none"
+  const currentPlan = isFreeTrial ? null : getPlanByKey(planKey)
+
+  const usageItems = usage
+    ? [
+        {
+          label: BILLING_PRODUCT_LABELS.opposition,
+          ...usage.opposition,
+        },
+        {
+          label: BILLING_PRODUCT_LABELS.legal,
+          ...usage.legal,
+        },
+        {
+          label: BILLING_PRODUCT_LABELS.self,
+          ...usage.self,
+        },
+      ]
+    : []
 
   return (
     <div className="min-h-screen bg-background">
@@ -176,7 +102,8 @@ export default async function BillingPage() {
         <div className="mb-7">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Billing &amp; Plans</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Manage your Stripe subscription and review usage.
+            Membership unlocks full Opposition, Legal, and Self reports. Cases and processing are
+            unlimited.
           </p>
         </div>
 
@@ -187,40 +114,31 @@ export default async function BillingPage() {
                 <Zap className="h-4 w-4 text-accent" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">{currentPlan?.name ?? "Free Trial"}</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {isFreeTrial ? FREE_TRIAL_OFFERING.name : currentPlan?.name ?? "No membership"}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   Status: {billing?.billing_status ?? "none"} · {formatPeriodEnd(billing?.current_period_end ?? null)}
                 </p>
-                {billing?.plan_key === "pay_per_report" ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Autopay: {billing.stripe_default_payment_method_id ? "enabled" : "not set"} ·
-                    Charged reports: {billing.reports_charged_count}
-                  </p>
-                ) : null}
               </div>
             </div>
 
-            <BillingActions
-              selectedPlanKey={selectedPlanForCheckout}
-              hasCustomerPortal={Boolean(billing?.stripe_customer_id)}
-              showCheckout={false}
-            />
+            <BillingActions hasCustomerPortal={Boolean(billing?.stripe_customer_id)} />
           </div>
         </div>
 
         <div className="mb-8">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">This Month&apos;s Usage</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {usageItems.map(({ label, used, limit, unit, hint }) => {
-              const pct = limit && limit > 0 ? Math.round((used / limit) * 100) : null
+          <h2 className="mb-4 text-sm font-semibold text-foreground">This Period&apos;s Unlocks</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {usageItems.map(({ label, used, limit, remaining }) => {
+              const pct = limit > 0 ? Math.round((used / limit) * 100) : null
               return (
                 <div key={label} className="rounded-lg border border-border bg-card p-4">
                   <p className="text-xs text-muted-foreground">{label}</p>
                   <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
-                    {used}
-                    {unit}{" "}
+                    {remaining}{" "}
                     <span className="text-sm font-normal text-muted-foreground">
-                      / {limit == null ? "Unlimited" : `${limit}${unit}`}
+                      of {limit} remaining
                     </span>
                   </p>
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
@@ -233,7 +151,11 @@ export default async function BillingPage() {
                     />
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {pct == null ? hint : `${pct}% used`}
+                    {limit <= 0
+                      ? "Not included on current plan"
+                      : isFreeTrial && label === BILLING_PRODUCT_LABELS.opposition
+                        ? `${used} used (1 free unlock total)`
+                        : `${used} used this period`}
                   </p>
                 </div>
               )
@@ -245,16 +167,13 @@ export default async function BillingPage() {
           <h2 className="mb-4 text-sm font-semibold text-foreground">Payment History</h2>
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             {paymentHistory.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-muted-foreground">
-                No payments recorded yet.
-              </p>
+              <p className="px-4 py-6 text-sm text-muted-foreground">No payments recorded yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-secondary/40 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-medium">Date</th>
-                      <th className="px-4 py-3 font-medium">Type</th>
                       <th className="px-4 py-3 font-medium">Description</th>
                       <th className="px-4 py-3 font-medium">Amount</th>
                       <th className="px-4 py-3 font-medium">Reference</th>
@@ -270,12 +189,7 @@ export default async function BillingPage() {
                             day: "numeric",
                           })}
                         </td>
-                        <td className="px-4 py-3 text-foreground">
-                          {item.source === "subscription" ? "Subscription" : "Pay-per-report"}
-                        </td>
-                        <td className="px-4 py-3 text-foreground">
-                          {item.description}
-                        </td>
+                        <td className="px-4 py-3 text-foreground">{item.description}</td>
                         <td className="px-4 py-3 text-foreground">
                           {(item.charged_amount_cents / 100).toLocaleString("en-US", {
                             style: "currency",
@@ -294,36 +208,56 @@ export default async function BillingPage() {
           </div>
         </div>
 
-        <h2 className="mb-4 text-sm font-semibold text-foreground">All Plans</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <h2 className="mb-4 text-sm font-semibold text-foreground">Membership Plans</h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <FreeTrialPlanCard
+            isCurrent={isFreeTrial}
+            oppositionRemaining={usage?.opposition.remaining}
+          />
           {BILLING_PLANS.map((plan) => {
             const isCurrent = billing?.plan_key === plan.key
             return (
               <div
-                key={plan.name}
+                key={plan.key}
                 className={cn(
                   "flex flex-col rounded-lg border bg-card",
-                  isCurrent ? "border-primary ring-1 ring-primary/20" : "border-border"
+                  isCurrent ? "border-primary ring-1 ring-primary/20" : "border-border",
+                  plan.popular && !isCurrent && "border-accent/40"
                 )}
               >
                 <div className="border-b border-border p-5">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="text-sm font-semibold text-foreground">{plan.name}</h3>
-                    {isCurrent && (
-                      <Badge
-                        variant="outline"
-                        className="border-accent/30 bg-accent/5 text-[10px] text-accent"
-                      >
-                        Current
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {plan.popular && !isCurrent ? (
+                        <Badge
+                          variant="outline"
+                          className="border-accent/30 bg-accent/5 text-[10px] text-accent"
+                        >
+                          Popular
+                        </Badge>
+                      ) : null}
+                      {isCurrent ? (
+                        <Badge
+                          variant="outline"
+                          className="border-accent/30 bg-accent/5 text-[10px] text-accent"
+                        >
+                          Current
+                        </Badge>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-semibold tracking-tight text-foreground">
-                      {plan.priceLabel}
+                      {plan.monthlyPriceLabel}
                     </span>
-                    <span className="text-xs text-muted-foreground">/{plan.period}</span>
+                    <span className="text-xs text-muted-foreground">/ month</span>
                   </div>
+                  {plan.annualPriceLabel ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      or {plan.annualPriceLabel} / year
+                    </p>
+                  ) : null}
                   <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                     {plan.description}
                   </p>
@@ -338,16 +272,21 @@ export default async function BillingPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="p-5 pt-0">
-                  {plan.key === "free_trial" ? (
-                    <p className="text-xs text-muted-foreground">Auto-assigned on signup.</p>
-                  ) : (
+                <div className="space-y-2 p-5 pt-0">
+                  <PlanCheckoutButton
+                    planKey={plan.key}
+                    interval="month"
+                    disabled={isCurrent}
+                    label={isCurrent ? "Current Plan" : "Subscribe monthly"}
+                  />
+                  {plan.annualPriceLabel ? (
                     <PlanCheckoutButton
                       planKey={plan.key}
+                      interval="year"
                       disabled={isCurrent}
-                      label={isCurrent ? "Current Plan" : "Choose Plan"}
+                      label={isCurrent ? "Current Plan" : "Subscribe annually"}
                     />
-                  )}
+                  ) : null}
                 </div>
               </div>
             )
