@@ -320,136 +320,151 @@ export function CaseDetailView({
           </TabsContent>
 
           <TabsContent value="tradelines">
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-secondary/30">
-                      {[
-                        "Creditor",
-                        "Bureaus",
-                        "Type",
-                        "Status",
-                        "Balance",
-                        "Limit",
-                        "Verification",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tradelines.map((t) => (
-                      <tr
-                        key={t.id}
-                        className="border-b border-border last:border-0 hover:bg-secondary/20"
-                      >
-                        <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-foreground">
-                          {t.creditor_name}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs uppercase text-muted-foreground">
-                          {t.bureaus.join(", ")}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                          {t.account_type ?? "—"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs">
-                          <span
-                            className={cn(
-                              "inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium",
-                              t.is_negative
-                                ? "border-destructive/20 bg-destructive/8 text-destructive"
-                                : "border-border bg-muted text-muted-foreground"
-                            )}
+            <GatedContentOverlay
+              locked={!oppositionUnlocked}
+              footer={
+                <UnlockProductButton
+                  caseId={caseData.id}
+                  product="opposition"
+                  usage={usage.opposition}
+                  unlocked={oppositionUnlocked}
+                  size="sm"
+                />
+              }
+            >
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/30">
+                        {[
+                          "Creditor",
+                          "Bureaus",
+                          "Type",
+                          "Status",
+                          "Balance",
+                          "Limit",
+                          "Verification",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground"
                           >
-                            {t.account_status ?? (t.is_negative ? "Negative" : "—")}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-foreground">
-                          {t.balance != null ? `$${t.balance.toLocaleString()}` : "—"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                          {t.credit_limit != null ? `$${t.credit_limit.toLocaleString()}` : "—"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3">
-                          <VerificationBadge status={t.verification_status} />
-                        </td>
+                            {h}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {tradelines.map((t) => (
+                        <tr
+                          key={t.id}
+                          className="border-b border-border last:border-0 hover:bg-secondary/20"
+                        >
+                          <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-foreground">
+                            {t.creditor_name}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-xs uppercase text-muted-foreground">
+                            {t.bureaus.join(", ")}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+                            {t.account_type ?? "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-xs">
+                            <span
+                              className={cn(
+                                "inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium",
+                                t.is_negative
+                                  ? "border-destructive/20 bg-destructive/8 text-destructive"
+                                  : "border-border bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {t.account_status ?? (t.is_negative ? "Negative" : "—")}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-xs text-foreground">
+                            {t.balance != null ? `$${t.balance.toLocaleString()}` : "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+                            {t.credit_limit != null ? `$${t.credit_limit.toLocaleString()}` : "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <VerificationBadge status={t.verification_status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            </GatedContentOverlay>
           </TabsContent>
 
           <TabsContent value="inquiries">
-            <div className="space-y-2 rounded-lg border border-border bg-card p-4">
-              {inquiries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No inquiries extracted.</p>
-              ) : (
-                inquiries.map((inq) => (
-                  <div
-                    key={inq.id}
-                    className="flex items-center justify-between rounded-md border border-border px-4 py-2.5"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium text-foreground">
-                        {inq.creditor_name}
-                      </span>
-                      <span className="text-xs uppercase text-muted-foreground">{inq.bureau}</span>
+            <GatedContentOverlay
+              locked={!oppositionUnlocked}
+              footer={
+                <UnlockProductButton
+                  caseId={caseData.id}
+                  product="opposition"
+                  usage={usage.opposition}
+                  unlocked={oppositionUnlocked}
+                  size="sm"
+                />
+              }
+            >
+              <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+                {inquiries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No inquiries extracted.</p>
+                ) : (
+                  inquiries.map((inq) => (
+                    <div
+                      key={inq.id}
+                      className="flex items-center justify-between rounded-md border border-border px-4 py-2.5"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium text-foreground">
+                          {inq.creditor_name}
+                        </span>
+                        <span className="text-xs uppercase text-muted-foreground">{inq.bureau}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            "text-xs font-medium",
+                            inq.inquiry_type === "hard" ? "text-destructive" : "text-muted-foreground"
+                          )}
+                        >
+                          {inq.inquiry_type}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {inq.inquiry_date ?? "—"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={cn(
-                          "text-xs font-medium",
-                          inq.inquiry_type === "hard" ? "text-destructive" : "text-muted-foreground"
-                        )}
-                      >
-                        {inq.inquiry_type}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {inq.inquiry_date ?? "—"}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            {collections.length > 0 && (
-              <div className="mt-4 rounded-lg border border-border bg-card p-4">
-                <h3 className="mb-2 text-sm font-semibold text-foreground">Collections</h3>
-                <ul className="space-y-2 text-xs text-muted-foreground">
-                  {collections.map((c) => (
-                    <li key={c.id}>
-                      {c.creditor_name} ({c.bureau}) — $
-                      {c.balance?.toLocaleString() ?? "0"} — {c.status ?? "unknown"}
-                    </li>
-                  ))}
-                </ul>
+                  ))
+                )}
               </div>
-            )}
+              {collections.length > 0 && (
+                <div className="mt-4 rounded-lg border border-border bg-card p-4">
+                  <h3 className="mb-2 text-sm font-semibold text-foreground">Collections</h3>
+                  <ul className="space-y-2 text-xs text-muted-foreground">
+                    {collections.map((c) => (
+                      <li key={c.id}>
+                        {c.creditor_name} ({c.bureau}) — $
+                        {c.balance?.toLocaleString() ?? "0"} — {c.status ?? "unknown"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </GatedContentOverlay>
           </TabsContent>
 
           <TabsContent value="legal-report">
             {legalReport?.content?.sections ? (
               <div className="space-y-4">
-                <GatedContentOverlay
-                  locked={!legalUnlocked}
-                  footer={
-                    <UnlockProductButton
-                      caseId={caseData.id}
-                      product="legal"
-                      usage={usage.legal}
-                      unlocked={legalUnlocked}
-                      size="sm"
-                    />
-                  }
-                >
+                <div className="relative overflow-hidden rounded-lg">
                   <div className="space-y-4">
                     <p className="text-[11px] leading-relaxed text-muted-foreground">
                       {legalReport.content.disclaimer}
@@ -463,7 +478,18 @@ export function CaseDetailView({
                       </div>
                     ))}
                   </div>
-                </GatedContentOverlay>
+                  {!legalUnlocked ? (
+                    <div className="border-t border-border/60 bg-card/95 p-4">
+                      <UnlockProductButton
+                        caseId={caseData.id}
+                        product="legal"
+                        usage={usage.legal}
+                        unlocked={legalUnlocked}
+                        size="sm"
+                      />
+                    </div>
+                  ) : null}
+                </div>
                 {legalUnlocked ? (
                   <Button asChild>
                     <Link href={`/cases/${caseData.id}/report`}>View Full Report</Link>

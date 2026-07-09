@@ -32,7 +32,7 @@ export function OppositionMetricsSection({
         />
       }
     >
-      <CaseMetricsGrid metrics={metrics} />
+      <CaseMetricsGrid metrics={metrics} gateMetricCards={!unlocked} />
     </GatedContentOverlay>
   )
 }

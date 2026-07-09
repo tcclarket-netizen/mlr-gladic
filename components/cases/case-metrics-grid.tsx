@@ -6,6 +6,7 @@ import {
   formatSourceLine,
   hasCompletenessWarning,
 } from "@/lib/metrics/opposition-display"
+import { GatedContentOverlay } from "@/components/cases/gated-content-overlay"
 import { cn } from "@/lib/utils"
 
 type MetricCardProps = {
@@ -102,7 +103,13 @@ function IdentitySection({
   )
 }
 
-export function CaseMetricsGrid({ metrics }: { metrics: CaseMetrics }) {
+export function CaseMetricsGrid({
+  metrics,
+  gateMetricCards = false,
+}: {
+  metrics: CaseMetrics
+  gateMetricCards?: boolean
+}) {
   const report = deriveOppositionReport(metrics)
 
   if (!report) {
@@ -153,91 +160,95 @@ export function CaseMetricsGrid({ metrics }: { metrics: CaseMetrics }) {
         )}
       </div>
 
-      <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Core opposition metrics
-        </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
-            code="OAS"
-            title="Opposition Average Score™"
-            value={formatOppositionMetric(m.oas)}
-            detail={formatSourceLine(sourceBreakdown.oasSources)}
-            footnote={
-              completenessWarnings.oasCompletenessWarning
-                ? "Fewer than 3 bureau scores — averaged across available scores only"
-                : "All three bureau scores available — sum ÷ 3"
-            }
-            warning={completenessWarnings.oasCompletenessWarning}
-          />
-          <MetricCard
-            code="OCU"
-            title="Opposition Credit Usage™"
-            value={formatOppositionMetric(m.ocu, { suffix: "%", decimals: 1 })}
-            detail={formatSourceLine(sourceBreakdown.ocuSources, (n) => `${n}%`)}
-            footnote={`${report.ocuCalculationMethod}. ${ocuFootnote}`}
-            warning={completenessWarnings.ocuCompletenessWarning}
-          />
-          <MetricCard
-            code="OSP"
-            title="Opposition Spending Power™"
-            value={formatOppositionMetric(m.osp, { currency: true })}
-            detail={formatSourceLine(sourceBreakdown.ospSources, (n) =>
-              new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                maximumFractionDigits: 0,
-              }).format(n)
-            )}
-            footnote="Active open revolving limits only (÷ available bureaus with data)"
-            warning={completenessWarnings.ospCompletenessWarning}
-          />
-          <MetricCard
-            code="OIP"
-            title="Opposition Inquiry Pressure™"
-            value={formatOppositionMetric(m.oip, { decimals: 2 })}
-            detail={formatSourceLine(sourceBreakdown.inquirySources)}
-            footnote="Sum of bureau inquiry counts ÷ 12"
-            warning={completenessWarnings.oipCompletenessWarning}
-          />
+      <GatedContentOverlay locked={gateMetricCards} intensity="strong">
+        <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Core opposition metrics
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
+              code="OAS"
+              title="Opposition Average Score™"
+              value={formatOppositionMetric(m.oas)}
+              detail={formatSourceLine(sourceBreakdown.oasSources)}
+              footnote={
+                completenessWarnings.oasCompletenessWarning
+                  ? "Fewer than 3 bureau scores — averaged across available scores only"
+                  : "All three bureau scores available — sum ÷ 3"
+              }
+              warning={completenessWarnings.oasCompletenessWarning}
+            />
+            <MetricCard
+              code="OCU"
+              title="Opposition Credit Usage™"
+              value={formatOppositionMetric(m.ocu, { suffix: "%", decimals: 1 })}
+              detail={formatSourceLine(sourceBreakdown.ocuSources, (n) => `${n}%`)}
+              footnote={`${report.ocuCalculationMethod}. ${ocuFootnote}`}
+              warning={completenessWarnings.ocuCompletenessWarning}
+            />
+            <MetricCard
+              code="OSP"
+              title="Opposition Spending Power™"
+              value={formatOppositionMetric(m.osp, { currency: true })}
+              detail={formatSourceLine(sourceBreakdown.ospSources, (n) =>
+                new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 0,
+                }).format(n)
+              )}
+              footnote="Active open revolving limits only (÷ available bureaus with data)"
+              warning={completenessWarnings.ospCompletenessWarning}
+            />
+            <MetricCard
+              code="OIP"
+              title="Opposition Inquiry Pressure™"
+              value={formatOppositionMetric(m.oip, { decimals: 2 })}
+              detail={formatSourceLine(sourceBreakdown.inquirySources)}
+              footnote="Sum of bureau inquiry counts ÷ 12"
+              warning={completenessWarnings.oipCompletenessWarning}
+            />
+          </div>
         </div>
-      </div>
+      </GatedContentOverlay>
 
-      <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Risk exposure &amp; success rating
-        </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <MetricCard
-            code="ORE"
-            title="Opposition Risk Exposure™"
-            value={riskExposure.hasNegativeActivity ? `−${m.riskDeduction}%` : "Clear"}
-            detail={
-              riskExposure.hasNegativeActivity
-                ? `${riskExposure.negativeAccountCount} negative account(s) — collections ${riskExposure.collectionAccountCount}, charge-offs ${riskExposure.chargeOffAccountCount}, late ${riskExposure.latePaymentAccountCount}`
-                : "No deduplicated negative accounts in extracted tradelines"
-            }
-            footnote="Fixed −15% deduction when any negative activity exists (does not stack)"
-            highlight={riskExposure.hasNegativeActivity}
-          />
-          <MetricCard
-            code="OSR"
-            title="Opposition Success Rating™"
-            value={`${m.successRating}%`}
-            detail={`${m.successClassification} — 100% minus risk deduction`}
-            footnote="Always calculated: 100 − risk deduction"
-            highlight={m.successRating >= 85}
-          />
-          <MetricCard
-            code="Prime"
-            title="Prime Band Qualification"
-            value={report.primeBandQualification.status}
-            detail={`OAS ${formatOppositionMetric(report.primeBandQualification.currentOAS)} · required ${report.primeBandQualification.requiredOAS}+`}
-            footnote="Separate from Success Rating — multi-bureau prime band gate"
-            highlight={report.primeBandQualification.status === "Prime Qualified"}
-          />
+      <GatedContentOverlay locked={gateMetricCards} intensity="strong">
+        <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Risk exposure &amp; success rating
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <MetricCard
+              code="ORE"
+              title="Opposition Risk Exposure™"
+              value={riskExposure.hasNegativeActivity ? `−${m.riskDeduction}%` : "Clear"}
+              detail={
+                riskExposure.hasNegativeActivity
+                  ? `${riskExposure.negativeAccountCount} negative account(s) — collections ${riskExposure.collectionAccountCount}, charge-offs ${riskExposure.chargeOffAccountCount}, late ${riskExposure.latePaymentAccountCount}`
+                  : "No deduplicated negative accounts in extracted tradelines"
+              }
+              footnote="Fixed −15% deduction when any negative activity exists (does not stack)"
+              highlight={riskExposure.hasNegativeActivity}
+            />
+            <MetricCard
+              code="OSR"
+              title="Opposition Success Rating™"
+              value={`${m.successRating}%`}
+              detail={`${m.successClassification} — 100% minus risk deduction`}
+              footnote="Always calculated: 100 − risk deduction"
+              highlight={m.successRating >= 85}
+            />
+            <MetricCard
+              code="Prime"
+              title="Prime Band Qualification"
+              value={report.primeBandQualification.status}
+              detail={`OAS ${formatOppositionMetric(report.primeBandQualification.currentOAS)} · required ${report.primeBandQualification.requiredOAS}+`}
+              footnote="Separate from Success Rating — multi-bureau prime band gate"
+              highlight={report.primeBandQualification.status === "Prime Qualified"}
+            />
+          </div>
         </div>
-      </div>
+      </GatedContentOverlay>
 
       <div className="rounded-lg border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">

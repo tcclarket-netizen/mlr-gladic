@@ -18,7 +18,7 @@ export function MlrHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#D8DEE9]/80 bg-white/75 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-[#D8DEE9]/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center justify-between px-6">
         <GladicLogo size="sm" variant="onLight" href="/" />
 
@@ -61,7 +61,7 @@ export function MlrHeader() {
       </div>
 
       {open && (
-        <div className="border-t border-[#D8DEE9] bg-white/90 px-6 py-4 backdrop-blur-xl md:hidden">
+        <div className="border-t border-[#D8DEE9] bg-white/95 px-6 py-4 backdrop-blur-md md:hidden">
           <nav className="flex flex-col gap-3">
             {navLinks.map((link) => (
               <Link

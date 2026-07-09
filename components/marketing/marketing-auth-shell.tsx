@@ -13,7 +13,7 @@ export function MarketingAuthShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <header className="border-b border-[#D8DEE9]/80 bg-white/75 px-6 py-4 backdrop-blur-xl">
+      <header className="border-b border-[#D8DEE9]/80 bg-white/90 px-6 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-sm items-center justify-between">
           <GladicLogo size="sm" variant="onLight" href="/" />
           <Link href="/" className="text-xs text-[#2454FF] hover:underline">
