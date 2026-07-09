@@ -3,41 +3,13 @@ import type Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getPlanByKey, NO_MEMBERSHIP_PLAN_KEY } from "@/lib/billing/plans"
 import { getStripeClient, getStripeWebhookSecret } from "@/lib/stripe/config"
+import {
+  cancelSubscriptionsExcept,
+  listCustomerSubscriptions,
+  upsertUserBillingFromSubscription,
+} from "@/lib/stripe/subscription-lifecycle"
 
 export const runtime = "nodejs"
-
-function subscriptionStatus(status: Stripe.Subscription.Status) {
-  if (status === "trialing") return "trialing"
-  if (status === "active") return "active"
-  if (status === "past_due") return "past_due"
-  if (status === "canceled") return "canceled"
-  if (status === "incomplete") return "incomplete"
-  if (status === "incomplete_expired") return "incomplete_expired"
-  if (status === "unpaid") return "unpaid"
-  return "none"
-}
-
-async function upsertFromSubscription(subscription: Stripe.Subscription) {
-  const admin = createAdminClient()
-  const planFromMeta = subscription.metadata?.plan_key
-  const userId = subscription.metadata?.user_id
-
-  if (!userId) return
-
-  await admin.from("user_billing").upsert({
-    user_id: userId,
-    stripe_customer_id:
-      typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
-    stripe_subscription_id: subscription.id,
-    stripe_price_id: subscription.items.data[0]?.price?.id ?? null,
-    plan_key: getPlanByKey(planFromMeta ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY,
-    billing_status: subscriptionStatus(subscription.status),
-    current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-    current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-    cancel_at_period_end: subscription.cancel_at_period_end,
-    updated_at: new Date().toISOString(),
-  })
-}
 
 export async function POST(request: Request) {
   const stripe = getStripeClient()
@@ -77,16 +49,29 @@ export async function POST(request: Request) {
         billing_status: "active",
         updated_at: new Date().toISOString(),
       })
+
+      if (customerId && subscriptionId) {
+        const existing = await listCustomerSubscriptions(stripe, customerId)
+        await cancelSubscriptionsExcept(stripe, existing, subscriptionId)
+      }
     }
 
     if (session.mode === "subscription" && typeof session.subscription === "string") {
       const subscription = await stripe.subscriptions.retrieve(session.subscription)
-      await upsertFromSubscription(subscription)
+      await upsertUserBillingFromSubscription(subscription)
     }
   }
 
   if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
-    await upsertFromSubscription(event.data.object as Stripe.Subscription)
+    const subscription = event.data.object as Stripe.Subscription
+    await upsertUserBillingFromSubscription(subscription)
+
+    const customerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer.id
+    const existing = await listCustomerSubscriptions(stripe, customerId)
+    await cancelSubscriptionsExcept(stripe, existing, subscription.id)
   }
 
   if (event.type === "customer.subscription.deleted") {
