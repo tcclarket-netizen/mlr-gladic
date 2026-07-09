@@ -30,6 +30,7 @@ type UnlockProductButtonProps = {
   usage: ProductUsage
   unlocked: boolean
   onUnlocked?: () => void
+  returnTab?: string
   size?: "sm" | "default"
   className?: string
 }
@@ -40,6 +41,7 @@ export function UnlockProductButton({
   usage,
   unlocked,
   onUnlocked,
+  returnTab,
   size = "default",
   className,
 }: UnlockProductButtonProps) {
@@ -63,7 +65,17 @@ export function UnlockProductButton({
         return
       }
       onUnlocked?.()
-      window.location.reload()
+      if (returnTab !== undefined) {
+        const url = new URL(window.location.href)
+        if (returnTab === "overview") {
+          url.searchParams.delete("tab")
+        } else {
+          url.searchParams.set("tab", returnTab)
+        }
+        window.location.href = url.toString()
+      } else {
+        window.location.reload()
+      }
     } catch {
       setError("Unable to connect. Please try again.")
     } finally {

@@ -28,6 +28,7 @@ export function OppositionMetricsSection({
           product="opposition"
           usage={oppositionUsage}
           unlocked={unlocked}
+          returnTab="overview"
           size="sm"
         />
       }

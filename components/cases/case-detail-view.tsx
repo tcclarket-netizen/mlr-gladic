@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { useCallback, useMemo } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowLeft,
   CheckCircle,
@@ -13,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { BUREAUS, caseReferenceCode } from "@/lib/cases/constants"
+import { resolveCaseDetailTab } from "@/lib/cases/case-detail-tabs"
 import { caseStatusLabel, caseStatusStyles, formatCaseDate } from "@/lib/cases/display"
 import { OppositionMetricsSection } from "@/components/cases/opposition-metrics-section"
 import { SelfReportTab } from "@/components/cases/self-report-tab"
@@ -48,6 +51,28 @@ export function CaseDetailView({
   const oppositionUnlocked = entitlements.opposition
   const legalUnlocked = entitlements.legal
   const selfUnlocked = entitlements.self
+
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const activeTab = useMemo(
+    () => resolveCaseDetailTab(searchParams.get("tab"), hasExtraction, hasLegalReport),
+    [searchParams, hasExtraction, hasLegalReport]
+  )
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (tab === "overview") {
+        params.delete("tab")
+      } else {
+        params.set("tab", tab)
+      }
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    },
+    [pathname, router, searchParams]
+  )
 
   const timeline = [
     { label: "Case created", date: formatCaseDate(caseData.created_at), done: true },
@@ -238,7 +263,7 @@ export function CaseDetailView({
           </div>
         )}
 
-        <Tabs defaultValue={hasExtraction ? "tradelines" : "overview"}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tradelines" disabled={!hasExtraction}>
@@ -290,6 +315,7 @@ export function CaseDetailView({
                       product="legal"
                       usage={usage.legal}
                       unlocked={legalUnlocked}
+                      returnTab="overview"
                       size="sm"
                     />
                   </div>
@@ -311,6 +337,7 @@ export function CaseDetailView({
                       product="self"
                       usage={usage.self}
                       unlocked={selfUnlocked}
+                      returnTab="overview"
                       size="sm"
                     />
                   </div>
@@ -328,6 +355,7 @@ export function CaseDetailView({
                   product="opposition"
                   usage={usage.opposition}
                   unlocked={oppositionUnlocked}
+                  returnTab="tradelines"
                   size="sm"
                 />
               }
@@ -409,6 +437,7 @@ export function CaseDetailView({
                   product="opposition"
                   usage={usage.opposition}
                   unlocked={oppositionUnlocked}
+                  returnTab="inquiries"
                   size="sm"
                 />
               }
@@ -485,6 +514,7 @@ export function CaseDetailView({
                         product="legal"
                         usage={usage.legal}
                         unlocked={legalUnlocked}
+                        returnTab="legal-report"
                         size="sm"
                       />
                     </div>

@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { getCaseExtractionData } from "@/lib/cases/queries"
 import { getCaseBillingContext } from "@/lib/billing/queries"
@@ -18,5 +19,9 @@ export default async function CaseDetailPage({
     notFound()
   }
 
-  return <CaseDetailView {...data} billingContext={billingContext} />
+  return (
+    <Suspense fallback={null}>
+      <CaseDetailView {...data} billingContext={billingContext} />
+    </Suspense>
+  )
 }

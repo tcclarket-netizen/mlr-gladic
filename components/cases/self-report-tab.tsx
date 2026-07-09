@@ -150,6 +150,7 @@ export function SelfReportTab({
               product="self"
               usage={selfUsage}
               unlocked={selfUnlocked}
+              returnTab="self-report"
               size="sm"
             />
           )}
