@@ -13,10 +13,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'GLADIC AI™ Legal Report Intelligence',
+  title: 'GLADIC AI™ · MLR Credit Rights Intelligence',
   description:
-    'Upload bureau reports, extract tradelines, generate legal interpretation reports, dispute packs, and agency filing documents.',
-  generator: 'v0.app',
+    'Generate Opposition Reports™, My Legal Reports™, and My Self Reports™ through membership access. Credit Rights Intelligence™ from one secure dashboard.',
 }
 
 export default function RootLayout({

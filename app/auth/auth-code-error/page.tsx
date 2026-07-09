@@ -1,32 +1,24 @@
 import Link from "next/link"
-import { Shield, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { AlertCircle } from "lucide-react"
+import { MarketingAuthShell } from "@/components/marketing/marketing-auth-shell"
 
 export default function AuthCodeErrorPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary/30 px-4 py-12">
-      <div className="w-full max-w-sm text-center">
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary shadow-sm">
-            <Shield className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">GLADIC AI™</h1>
+    <MarketingAuthShell title="Authentication link expired">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+          <AlertCircle className="h-6 w-6 text-red-600" />
         </div>
-
-        <div className="rounded-xl border border-border bg-card p-7 shadow-sm">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-            <AlertCircle className="h-6 w-6 text-destructive" />
-          </div>
-          <h2 className="text-base font-semibold text-foreground">Authentication link expired</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            This sign-in or confirmation link is invalid or has expired. Request a new link and try
-            again.
-          </p>
-          <Button asChild className="mt-6 w-full">
-            <Link href="/sign-in">Back to sign in</Link>
-          </Button>
-        </div>
+        <p className="text-sm text-[#526174]">
+          This sign-in or confirmation link is invalid or has expired. Request a new link and try again.
+        </p>
+        <Link
+          href="/sign-in"
+          className="mt-6 inline-block w-full rounded-lg bg-[#2454FF] px-4 py-2.5 text-center text-sm font-semibold text-white hover:brightness-110"
+        >
+          Back to sign in
+        </Link>
       </div>
-    </div>
+    </MarketingAuthShell>
   )
 }
