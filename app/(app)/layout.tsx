@@ -15,19 +15,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? ACCOUNT_TYPE_LABELS[profile.account_type]
     : "User"
 
-  const initials = displayName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "TK"
-
   return (
     <div className="flex min-h-screen">
       <AppSidebar
+        userId={user?.id ?? user?.email ?? "anonymous"}
         displayName={displayName}
         accountLabel={accountLabel}
-        initials={initials}
         email={user?.email ?? ""}
       />
       <main className="ml-60 min-w-0 flex-1">{children}</main>

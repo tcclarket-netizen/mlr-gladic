@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { Shield, CreditCard, User2 } from "lucide-react"
+import { CreditCard, Shield, User2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form"
 import { SecuritySettingsForm } from "@/components/settings/security-settings-form"
+import { UserAvatar } from "@/components/user/user-avatar"
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/profile"
 import { getUserBilling } from "@/lib/billing/queries"
 import { getPlanByKey, FREE_TRIAL_OFFERING } from "@/lib/billing/plans"
@@ -44,6 +45,21 @@ export default async function SettingsPage() {
               <h2 className="text-base font-semibold text-foreground">Profile</h2>
             </div>
             <Separator className="mb-4" />
+            <div className="mb-5 flex items-center gap-4">
+              <UserAvatar
+                seed={user?.id ?? email}
+                name={fullName}
+                className="h-14 w-14"
+                emojiClassName="text-2xl"
+              />
+              <div>
+                <p className="text-sm font-medium text-foreground">{fullName || "Your account"}</p>
+                <p className="text-xs text-muted-foreground">{email}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Your avatar is assigned automatically and stays the same for your account.
+                </p>
+              </div>
+            </div>
             <ProfileSettingsForm
               fullName={fullName}
               email={email}

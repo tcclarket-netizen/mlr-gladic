@@ -250,7 +250,7 @@ export function CaseDetailView({
         )}
 
         {hasExtraction && (
-          <div className="mb-6">
+          <div id="case-opposition-analysis" className="mb-6 scroll-mt-6">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Opposition Report™ Analysis
             </h2>
@@ -263,7 +263,7 @@ export function CaseDetailView({
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <Tabs id="case-detail-tabs" value={activeTab} onValueChange={handleTabChange} className="scroll-mt-6">
           <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tradelines" disabled={!hasExtraction}>
@@ -315,7 +315,7 @@ export function CaseDetailView({
                       product="legal"
                       usage={usage.legal}
                       unlocked={legalUnlocked}
-                      returnTab="overview"
+                      returnTab="legal-report"
                       size="sm"
                     />
                   </div>
@@ -337,7 +337,7 @@ export function CaseDetailView({
                       product="self"
                       usage={usage.self}
                       unlocked={selfUnlocked}
-                      returnTab="overview"
+                      returnTab="self-report"
                       size="sm"
                     />
                   </div>

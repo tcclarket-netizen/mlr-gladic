@@ -40,7 +40,7 @@ function normalizeContent(content: LegalReportContent): LegalReportContent {
       classification: "Educational & Self-Help Legal Interpretation",
       client_capacity: "Self-Represented Consumer (28 U.S.C. § 1654)",
       scope: "Federal & State (as applicable)",
-      delivery_format: "AI-Fillable DOCX",
+      delivery_format: "PDF",
       record_type: "Administrative & Procedural Enforcement File",
     },
     notice_of_limitation: content.notice_of_limitation ?? content.disclaimer,
@@ -64,38 +64,28 @@ export function LegalReportViewer({
   const section = content.sections.find((s) => s.id === activeSection)
   const [showToc, setShowToc] = useState(false)
 
-  const [docError, setDocError] = useState<string | null>(null)
-  const [docPending, startDocTransition] = useTransition()
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [pdfPending, startPdfTransition] = useTransition()
 
-  const handleDownloadMarkdown = () => {
-    const blob = new Blob([report.markdown ?? ""], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `MY-LEGAL-REPORT-${reference}.md`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const handleDownloadDocx = () => {
-    setDocError(null)
-    startDocTransition(async () => {
+  const handleDownloadPdf = () => {
+    setDownloadError(null)
+    startPdfTransition(async () => {
       try {
-        const res = await fetch(`/api/cases/${caseId}/report/docx`)
+        const res = await fetch(`/api/cases/${caseId}/report/pdf`)
         if (!res.ok) {
           const data = (await res.json().catch(() => ({}))) as { error?: string }
-          setDocError(data.error ?? "Failed to generate Word document.")
+          setDownloadError(data.error ?? "Failed to generate PDF.")
           return
         }
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        a.download = `MY-LEGAL-REPORT-${reference}.docx`
+        a.download = `MY-LEGAL-REPORT-${reference}.pdf`
         a.click()
         URL.revokeObjectURL(url)
       } catch {
-        setDocError("Failed to download Word document. Please try again.")
+        setDownloadError("Failed to download PDF. Please try again.")
       }
     })
   }
@@ -159,27 +149,14 @@ export function LegalReportViewer({
                 >
                   Contents
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadMarkdown}
-                  disabled={!report.markdown}
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" /> Markdown
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadDocx}
-                  disabled={docPending}
-                >
-                  {docPending ? (
+                <Button size="sm" onClick={handleDownloadPdf} disabled={pdfPending}>
+                  {pdfPending ? (
                     <>
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Word…
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> PDF…
                     </>
                   ) : (
                     <>
-                      <Download className="mr-1.5 h-3.5 w-3.5" /> Word (.docx)
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> Download PDF
                     </>
                   )}
                 </Button>
@@ -191,7 +168,7 @@ export function LegalReportViewer({
                   unlocked={legalUnlocked}
                 />
               ) : null}
-              {docError && <p className="text-xs text-destructive">{docError}</p>}
+              {downloadError && <p className="text-xs text-destructive">{downloadError}</p>}
             </div>
           </div>
 

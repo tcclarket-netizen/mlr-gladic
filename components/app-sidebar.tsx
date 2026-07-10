@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
@@ -9,7 +10,6 @@ import {
   Building2,
   CreditCard,
   Settings,
-  Shield,
   ChevronDown,
   User,
 } from "lucide-react"
@@ -21,8 +21,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SignOutButton } from "@/components/auth/sign-out-button"
+import { UserAvatar } from "@/components/user/user-avatar"
+import { GLADIC_BRAND } from "@/lib/brand"
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -34,33 +35,47 @@ const navItems = [
 ]
 
 type AppSidebarProps = {
+  userId: string
   displayName: string
   accountLabel: string
-  initials: string
   email: string
 }
 
 export default function AppSidebar({
+  userId,
   displayName,
   accountLabel,
-  initials,
   email,
 }: AppSidebarProps) {
   const pathname = usePathname()
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded bg-accent">
-          <Shield className="h-4 w-4 text-accent-foreground" />
+      <Link
+        href="/dashboard"
+        className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4 transition-opacity hover:opacity-90"
+        aria-label={`${GLADIC_BRAND.full} home`}
+      >
+        <div className="flex shrink-0 items-center justify-center rounded-lg bg-white px-2 py-1.5 shadow-sm ring-1 ring-black/5">
+          <Image
+            src="/logo/logo.png"
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 object-contain object-center"
+            priority
+            aria-hidden
+          />
         </div>
-        <div>
-          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">GLADIC</span>
-          <span className="block text-[10px] uppercase leading-none tracking-widest text-sidebar-foreground/50">
-            Legal Intelligence
+        <div className="min-w-0 leading-tight">
+          <span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">
+            {GLADIC_BRAND.full}
+          </span>
+          <span className="block truncate text-[10px] uppercase tracking-widest text-sidebar-foreground/55">
+            {GLADIC_BRAND.navTagline}
           </span>
         </div>
-      </div>
+      </Link>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
@@ -108,11 +123,12 @@ export default function AppSidebar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent/60">
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-accent/20 text-xs font-semibold text-accent">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                seed={userId}
+                name={displayName}
+                className="h-7 w-7"
+                emojiClassName="text-sm"
+              />
               <div className="flex-1 text-left">
                 <div className="text-xs font-medium text-sidebar-foreground">{displayName}</div>
                 <div className="text-[11px] text-sidebar-foreground/50">{accountLabel}</div>

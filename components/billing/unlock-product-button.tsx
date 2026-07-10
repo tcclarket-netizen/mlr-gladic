@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Loader2, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,6 +37,21 @@ type UnlockProductButtonProps = {
   className?: string
 }
 
+function scrollAfterUnlock(returnTab?: string, product?: BillingProduct) {
+  const targetId =
+    returnTab === "overview" && product === "opposition"
+      ? "case-opposition-analysis"
+      : returnTab
+        ? "case-detail-tabs"
+        : null
+
+  if (!targetId) return
+
+  window.setTimeout(() => {
+    document.getElementById(targetId)?.scrollIntoView({ block: "start", behavior: "auto" })
+  }, 150)
+}
+
 export function UnlockProductButton({
   caseId,
   product,
@@ -46,6 +62,7 @@ export function UnlockProductButton({
   size = "default",
   className,
 }: UnlockProductButtonProps) {
+  const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const confirm = formatUnlockConfirmMessage(product, usage)
@@ -67,17 +84,22 @@ export function UnlockProductButton({
         return
       }
       onUnlocked?.()
+
       if (returnTab !== undefined) {
-        const url = new URL(window.location.href)
+        const params = new URLSearchParams(window.location.search)
         if (returnTab === "overview") {
-          url.searchParams.delete("tab")
+          params.delete("tab")
         } else {
-          url.searchParams.set("tab", returnTab)
+          params.set("tab", returnTab)
         }
-        window.location.href = url.toString()
-      } else {
-        window.location.reload()
+        const qs = params.toString()
+        router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname, {
+          scroll: false,
+        })
       }
+
+      router.refresh()
+      scrollAfterUnlock(returnTab, product)
     } catch {
       setError("Unable to connect. Please try again.")
     } finally {

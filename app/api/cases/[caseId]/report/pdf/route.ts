@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { caseReferenceCode } from "@/lib/cases/constants"
+import { DocxToPdfError } from "@/lib/report-generation/docx-to-pdf"
 import { generateLegalReportPdf } from "@/lib/report-generation/legal-report-pdf"
 import { getMembershipEntitlement } from "@/lib/billing/entitlements"
 import { isCaseProductUnlocked } from "@/lib/billing/case-entitlements"
 import type { LegalReportContent } from "@/types/legal-report"
 
 export const runtime = "nodejs"
+export const maxDuration = 60
 
 export async function GET(
   _request: Request,
@@ -58,7 +60,17 @@ export async function GET(
 
   const content = report.content as LegalReportContent
   const reference = caseReferenceCode(caseId)
-  const pdfBuffer = await generateLegalReportPdf(content, reference)
+
+  let pdfBuffer: Buffer
+  try {
+    pdfBuffer = await generateLegalReportPdf(content, reference)
+  } catch (error) {
+    if (error instanceof DocxToPdfError) {
+      return NextResponse.json({ error: error.message }, { status: 503 })
+    }
+    throw error
+  }
+
   const filename = `MY-LEGAL-REPORT-${reference}.pdf`
 
   return new NextResponse(new Uint8Array(pdfBuffer), {
