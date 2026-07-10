@@ -35,11 +35,19 @@ function findSofficeBinary() {
   )
 }
 
+function normalizeGotenbergUrl(raw: string) {
+  const trimmed = raw.trim().replace(/\/$/, "")
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 async function convertViaGotenberg(docx: Buffer): Promise<Buffer> {
-  const baseUrl = process.env.GOTENBERG_URL?.replace(/\/$/, "")
-  if (!baseUrl) {
+  const rawUrl = process.env.GOTENBERG_URL?.trim()
+  if (!rawUrl) {
     throw new DocxToPdfError("GOTENBERG_URL is not configured.")
   }
+
+  const baseUrl = normalizeGotenbergUrl(rawUrl)
 
   const form = new FormData()
   form.append(
