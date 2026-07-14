@@ -10,6 +10,8 @@ import {
   Upload,
   FileText,
   AlertCircle,
+  ArrowUpRight,
+  Scale,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -146,6 +148,19 @@ export function CaseDetailView({
 
         <div className="mb-6 grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
+            <a
+              href="https://gladic.ai/50-state-laws"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-3 flex items-center gap-2 rounded-lg border border-status-success/25 bg-status-success/8 px-3.5 py-2.5 text-xs transition-colors hover:border-status-success/40 hover:bg-status-success/12"
+            >
+              <Scale className="h-3.5 w-3.5 shrink-0 text-status-success" aria-hidden />
+              <span className="min-w-0 flex-1 text-status-success/80">
+                Click here to see your state laws —{" "}
+                <span className="font-medium text-status-success">GLADIC AI™ 50-State Laws</span>
+              </span>
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-status-success" aria-hidden />
+            </a>
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Bureau Reports
             </h2>

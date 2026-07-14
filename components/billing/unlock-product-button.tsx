@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type MouseEvent } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Loader2, Lock } from "lucide-react"
@@ -25,6 +25,7 @@ import { formatUnlockConfirmMessage } from "@/lib/billing/display"
 import { isUnlimitedQuota } from "@/lib/billing/plans"
 import type { ProductUsage } from "@/lib/billing/usage-summary"
 import { ProductQuotaBadge } from "@/components/billing/product-quota-badge"
+import { LegalReportFloridaAck } from "@/components/billing/legal-report-florida-ack"
 
 type UnlockProductButtonProps = {
   caseId: string
@@ -65,11 +66,27 @@ export function UnlockProductButton({
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [floridaAck, setFloridaAck] = useState(false)
   const confirm = formatUnlockConfirmMessage(product, usage)
   const unlimited = isUnlimitedQuota(usage.limit)
   const canUnlock = unlimited || (usage.limit > 0 && usage.remaining > 0)
+  const requiresFloridaAck = product === "legal"
+  const canConfirm = !requiresFloridaAck || floridaAck
 
-  const handleUnlock = async () => {
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) {
+      setFloridaAck(false)
+    }
+  }
+
+  const handleUnlock = async (event: MouseEvent<HTMLButtonElement>) => {
+    if (requiresFloridaAck && !floridaAck) {
+      event.preventDefault()
+      return
+    }
+
     setError(null)
     setPending(true)
     try {
@@ -137,7 +154,7 @@ export function UnlockProductButton({
           </Button>
         </div>
       ) : (
-        <AlertDialog>
+        <AlertDialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
           <AlertDialogTrigger asChild>
             <Button size={size} className="mt-3" disabled={!canUnlock || pending}>
               {pending ? (
@@ -148,14 +165,23 @@ export function UnlockProductButton({
               {BILLING_PRODUCT_UNLOCK_VERBS[product]}
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className={requiresFloridaAck ? "sm:max-w-lg" : undefined}>
             <AlertDialogHeader>
               <AlertDialogTitle>{confirm.title}</AlertDialogTitle>
               <AlertDialogDescription>{confirm.body}</AlertDialogDescription>
             </AlertDialogHeader>
+            {requiresFloridaAck ? (
+              <LegalReportFloridaAck
+                checked={floridaAck}
+                onCheckedChange={setFloridaAck}
+              />
+            ) : null}
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleUnlock} disabled={pending}>
+              <AlertDialogAction
+                onClick={handleUnlock}
+                disabled={pending || !canConfirm}
+              >
                 {pending ? "Unlocking…" : "Confirm unlock"}
               </AlertDialogAction>
             </AlertDialogFooter>

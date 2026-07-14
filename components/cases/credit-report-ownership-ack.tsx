@@ -47,7 +47,7 @@ export function CreditReportOwnershipAck({
                 <p className="text-xs font-semibold leading-snug text-foreground">
                   Credit Report Ownership &amp; Authorization
                 </p>
-                <span className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
                   Required
                 </span>
               </div>
