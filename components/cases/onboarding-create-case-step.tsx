@@ -1,11 +1,12 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { ArrowLeft, ArrowRight, FolderPlus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { CreditReportOwnershipAck } from "@/components/cases/credit-report-ownership-ack"
 import { US_STATES } from "@/lib/cases/constants"
 import { createCase, type CaseActionState } from "@/lib/cases/actions"
 
@@ -18,6 +19,7 @@ type OnboardingCreateCaseStepProps = {
 
 export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreateCaseStepProps) {
   const [state, formAction, pending] = useActionState(createCase, initialState)
+  const [ownershipAck, setOwnershipAck] = useState(false)
 
   useEffect(() => {
     if (state.caseId) {
@@ -99,11 +101,17 @@ export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreate
           />
         </div>
 
+        <CreditReportOwnershipAck
+          checked={ownershipAck}
+          onCheckedChange={setOwnershipAck}
+          invalid={Boolean(state.error) && !ownershipAck}
+        />
+
         <div className="mt-6 flex gap-3">
           <Button type="button" variant="outline" onClick={onBack} className="flex-1">
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
           </Button>
-          <Button type="submit" className="flex-1" disabled={pending}>
+          <Button type="submit" className="flex-1" disabled={pending || !ownershipAck}>
             {pending ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Creating…

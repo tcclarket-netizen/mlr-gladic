@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronDown,
   User,
+  ShieldCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -28,10 +29,17 @@ import { GLADIC_BRAND } from "@/lib/brand"
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Cases", href: "/cases", icon: FolderOpen },
-  { label: "Letters", href: "/letters", icon: Mail, disabled: true, beta: true },
-  { label: "Agency Filings", href: "/agency-filings", icon: Building2, disabled: true, beta: true },
   { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },
+  {
+    label: "Verified Defense",
+    href: "/verified-defense",
+    icon: ShieldCheck,
+    disabled: true,
+    beta: true,
+  },
+  { label: "Letters", href: "/letters", icon: Mail, disabled: true, beta: true },
+  { label: "Agency Filings", href: "/agency-filings", icon: Building2, disabled: true, beta: true },
 ]
 
 type AppSidebarProps = {

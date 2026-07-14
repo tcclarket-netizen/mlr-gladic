@@ -112,10 +112,19 @@ export async function createCase(
     const county = String(formData.get("county") ?? "").trim()
     const state = String(formData.get("state") ?? "").trim()
     const notes = String(formData.get("notes") ?? "").trim()
+    const creditReportOwnershipAck =
+      String(formData.get("creditReportOwnershipAck") ?? "") === "true"
     const redirectTo = String(formData.get("redirectTo") ?? "")
 
     if (!clientName || !county || !state) {
       return { error: "Client name, county, and state are required." }
+    }
+
+    if (!creditReportOwnershipAck) {
+      return {
+        error:
+          "You must acknowledge credit report ownership and lawful authority before creating a case.",
+      }
     }
 
     const { data: caseRow, error } = await supabase
@@ -139,6 +148,8 @@ export async function createCase(
       client_name: clientName,
       county,
       state,
+      credit_report_ownership_ack: true,
+      credit_report_ownership_ack_at: new Date().toISOString(),
     })
 
     revalidatePath("/dashboard")

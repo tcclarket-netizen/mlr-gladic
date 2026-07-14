@@ -1,6 +1,9 @@
 import Link from "next/link"
+import { ArrowUpRight } from "lucide-react"
 import { MlrHeader } from "@/components/marketing/mlr-header"
 import { MlrFooter } from "@/components/marketing/mlr-footer"
+
+const FULL_REFUNDS_URL = "https://gladic.ai/refunds"
 
 export default function RefundPolicyPage() {
   return (
@@ -17,10 +20,22 @@ export default function RefundPolicyPage() {
             Memberships may be canceled at any time. Cancellation prevents future renewal charges, and access continues
             through the end of the current billing period.
           </p>
-          <p className="mt-4 text-xs">
-            Full refund policy content will be published here.
-          </p>
         </div>
+
+        <p className="mt-8 text-center text-sm text-[#526174]">
+          Looking for the complete policy?{" "}
+          <a
+            href={FULL_REFUNDS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-[#2454FF] transition-colors hover:text-[#0B1020]"
+          >
+            View the full Refund Policy
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+          </a>{" "}
+          on GLADIC AI™.
+        </p>
+
         <p className="mt-6 text-center text-xs text-[#526174]">
           <Link href="/" className="text-[#2454FF] hover:underline">
             Return to home

@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { ArrowUpRight, ChevronDown } from "lucide-react"
 import { MLR_FAQS } from "@/lib/marketing/mlr-pricing"
 import { FadeIn } from "./motion"
+
+const HELP_CENTER_URL = "https://gladic.ai/help"
 
 export function MlrFaq() {
   const [open, setOpen] = useState<number | null>(0)
@@ -37,6 +39,22 @@ export function MlrFaq() {
               </div>
             ))}
           </div>
+        </FadeIn>
+
+        <FadeIn delay={0.2} className="mt-8 text-center">
+          <p className="text-sm text-[#526174]">
+            Looking for more detail?{" "}
+            <a
+              href={HELP_CENTER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-[#2454FF] transition-colors hover:text-[#0B1020]"
+            >
+              Visit the Help Center
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+            </a>{" "}
+            for guides, policies, and additional answers.
+          </p>
         </FadeIn>
       </div>
     </section>

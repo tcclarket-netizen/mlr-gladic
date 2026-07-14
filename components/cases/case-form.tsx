@@ -1,11 +1,12 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { CreditReportOwnershipAck } from "@/components/cases/credit-report-ownership-ack"
 import { US_STATES } from "@/lib/cases/constants"
 import { createCase, type CaseActionState } from "@/lib/cases/actions"
 
@@ -21,6 +22,7 @@ export function CaseForm({
   submitLabel = "Create Case",
 }: CaseFormProps) {
   const [state, formAction, pending] = useActionState(createCase, initialState)
+  const [ownershipAck, setOwnershipAck] = useState(false)
 
   return (
     <>
@@ -94,7 +96,13 @@ export function CaseForm({
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={pending}>
+        <CreditReportOwnershipAck
+          checked={ownershipAck}
+          onCheckedChange={setOwnershipAck}
+          invalid={Boolean(state.error) && !ownershipAck}
+        />
+
+        <Button type="submit" className="w-full" disabled={pending || !ownershipAck}>
           {pending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating…
