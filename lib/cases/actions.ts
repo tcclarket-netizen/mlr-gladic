@@ -114,6 +114,9 @@ export async function createCase(
     const notes = String(formData.get("notes") ?? "").trim()
     const creditReportOwnershipAck =
       String(formData.get("creditReportOwnershipAck") ?? "") === "true"
+    const creditReportConsentPayloadRaw = String(
+      formData.get("creditReportConsentPayload") ?? ""
+    ).trim()
     const redirectTo = String(formData.get("redirectTo") ?? "")
 
     if (!clientName || !county || !state) {
@@ -123,7 +126,19 @@ export async function createCase(
     if (!creditReportOwnershipAck) {
       return {
         error:
-          "You must acknowledge credit report ownership and lawful authority before creating a case.",
+          "You must complete the Credit Report Ownership, Authorization, and Identity-Verification Acknowledgment before creating a case.",
+      }
+    }
+
+    let creditReportConsentPayload: Record<string, unknown> | null = null
+    if (creditReportConsentPayloadRaw) {
+      try {
+        const parsed = JSON.parse(creditReportConsentPayloadRaw) as Record<string, unknown>
+        if (parsed && typeof parsed === "object") {
+          creditReportConsentPayload = parsed
+        }
+      } catch {
+        return { error: "Consent acknowledgment data is invalid. Please open and accept it again." }
       }
     }
 
@@ -150,6 +165,7 @@ export async function createCase(
       state,
       credit_report_ownership_ack: true,
       credit_report_ownership_ack_at: new Date().toISOString(),
+      credit_report_consent: creditReportConsentPayload,
     })
 
     revalidatePath("/dashboard")

@@ -97,8 +97,8 @@ export function CaseForm({
         </div>
 
         <CreditReportOwnershipAck
-          checked={ownershipAck}
-          onCheckedChange={setOwnershipAck}
+          accepted={ownershipAck}
+          onAcceptedChange={setOwnershipAck}
           invalid={Boolean(state.error) && !ownershipAck}
         />
 

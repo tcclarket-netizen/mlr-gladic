@@ -102,8 +102,8 @@ export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreate
         </div>
 
         <CreditReportOwnershipAck
-          checked={ownershipAck}
-          onCheckedChange={setOwnershipAck}
+          accepted={ownershipAck}
+          onAcceptedChange={setOwnershipAck}
           invalid={Boolean(state.error) && !ownershipAck}
         />
 
