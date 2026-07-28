@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { hasSupabaseEnv } from "@/lib/supabase/env"
 import { createClient } from "@/lib/supabase/server"
+import { attributeUserReferral } from "@/lib/referrals/attribution"
+import { REFERRAL_COOKIE } from "@/lib/referrals/constants"
 
 export type AuthActionState = {
   error?: string
@@ -44,6 +46,19 @@ export async function signIn(
     return { error: "Incorrect email or password." }
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user) {
+    const cookieStore = await cookies()
+    const refFromCookie = cookieStore.get(REFERRAL_COOKIE)?.value
+    const refFromMeta =
+      typeof user.user_metadata?.referral_code === "string"
+        ? user.user_metadata.referral_code
+        : null
+    await attributeUserReferral(user.id, refFromCookie || refFromMeta)
+  }
+
   revalidatePath("/", "layout")
   redirect(next.startsWith("/") ? next : "/dashboard")
 }
@@ -61,6 +76,10 @@ export async function signUp(
   const password = String(formData.get("password") ?? "")
   const confirm = String(formData.get("confirm") ?? "")
   const accountType = String(formData.get("accountType") ?? "consumer")
+  const referralFromForm = String(formData.get("referralCode") ?? "").trim()
+  const cookieStore = await cookies()
+  const referralCode =
+    referralFromForm || cookieStore.get(REFERRAL_COOKIE)?.value || ""
 
   if (!fullName || !email || !password) {
     return { error: "All fields are required." }
@@ -85,12 +104,24 @@ export async function signUp(
       data: {
         full_name: fullName,
         account_type: accountType,
+        ...(referralCode ? { referral_code: referralCode } : {}),
       },
     },
   })
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Attribute even when email confirmation is required (session may be null).
+  if (data.user && referralCode) {
+    const attributed = await attributeUserReferral(data.user.id, referralCode)
+    if (!attributed.ok) {
+      console.error("[referral] signup attribution failed", {
+        userId: data.user.id,
+        referralCode,
+      })
+    }
   }
 
   if (data.session) {

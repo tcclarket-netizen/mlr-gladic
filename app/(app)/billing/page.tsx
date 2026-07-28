@@ -68,7 +68,14 @@ async function getPayPerReportPaymentHistory(
     })
 
     return intents.data
-      .filter((pi) => pi.status === "succeeded" && (pi.amount_received ?? pi.amount ?? 0) > 0)
+      .filter((pi) => {
+        if (pi.status !== "succeeded") return false
+        if ((pi.amount_received ?? pi.amount ?? 0) <= 0) return false
+        // Only real report unlocks — exclude subscription PIs and card-setup noise.
+        if (pi.metadata?.billing_mode !== "pay_per_report") return false
+        const product = pi.metadata?.product
+        return product === "opposition" || product === "legal" || product === "self"
+      })
       .map((pi) => {
         const product = pi.metadata?.product
         const label =
@@ -78,7 +85,7 @@ async function getPayPerReportPaymentHistory(
               ? "MY LEGAL REPORT™ unlock"
               : product === "self"
                 ? "MY SELF REPORT™ unlock"
-                : "Pay-per-report charge"
+                : "Pay-per-report unlock"
         return {
           id: `pi_${pi.id}`,
           paid_at: new Date(pi.created * 1000).toISOString(),

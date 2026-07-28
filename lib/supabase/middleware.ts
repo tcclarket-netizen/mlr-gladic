@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import { getSupabaseEnv, hasSupabaseEnv } from "@/lib/supabase/env"
+import { normalizeReferralCode } from "@/lib/referrals/codes"
+import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE_SECONDS, REFERRAL_QUERY_PARAM } from "@/lib/referrals/constants"
 
 const PUBLIC_PATHS = [
   "/",
@@ -18,6 +20,21 @@ function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   )
+}
+
+function applyReferralCookie(response: NextResponse, request: NextRequest) {
+  const rawRef = request.nextUrl.searchParams.get(REFERRAL_QUERY_PARAM)
+  const code = normalizeReferralCode(rawRef)
+  if (!code) return response
+
+  response.cookies.set(REFERRAL_COOKIE, code, {
+    maxAge: REFERRAL_COOKIE_MAX_AGE_SECONDS,
+    path: "/",
+    sameSite: "lax",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  })
+  return response
 }
 
 export async function updateSession(request: NextRequest) {
@@ -53,14 +70,14 @@ export async function updateSession(request: NextRequest) {
   if (request.nextUrl.searchParams.has("code") && pathname !== "/auth/callback" && pathname !== "/auth/confirm") {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = "/auth/callback"
-    return NextResponse.redirect(redirectUrl)
+    return applyReferralCookie(NextResponse.redirect(redirectUrl), request)
   }
 
   if (!user && !isPublicPath(pathname)) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = "/sign-in"
     redirectUrl.searchParams.set("next", pathname)
-    return NextResponse.redirect(redirectUrl)
+    return applyReferralCookie(NextResponse.redirect(redirectUrl), request)
   }
 
   if (user && (pathname === "/sign-in" || pathname === "/sign-up")) {
@@ -70,5 +87,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  return supabaseResponse
+  return applyReferralCookie(supabaseResponse, request)
 }

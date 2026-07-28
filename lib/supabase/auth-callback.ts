@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr"
 import { type EmailOtpType } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 import { getSupabaseEnv } from "@/lib/supabase/env"
+import { attributeUserReferral } from "@/lib/referrals/attribution"
+import { REFERRAL_COOKIE } from "@/lib/referrals/constants"
 
 /**
  * Handles Supabase auth redirects from email links and OAuth.
@@ -16,7 +18,10 @@ export async function handleAuthCallback(request: NextRequest) {
   const next = searchParams.get("next") ?? "/dashboard"
   const redirectPath = next.startsWith("/") ? next : "/dashboard"
   const successUrl = `${origin}${redirectPath}`
-  const errorUrl = `${origin}/auth/auth-code-error`
+  const isSignupConfirm =
+    type === "signup" ||
+    type === "email" ||
+    redirectPath.startsWith("/onboarding")
 
   const { url, anonKey } = getSupabaseEnv()
 
@@ -40,10 +45,25 @@ export async function handleAuthCallback(request: NextRequest) {
     },
   })
 
+  async function finalizeForUser() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return false
+
+    const refFromCookie = request.cookies.get(REFERRAL_COOKIE)?.value
+    const refFromMeta =
+      typeof user.user_metadata?.referral_code === "string"
+        ? user.user_metadata.referral_code
+        : null
+    await attributeUserReferral(user.id, refFromCookie || refFromMeta)
+    return true
+  }
+
   // PKCE flow (default for new Supabase projects — signup, recovery, magic link)
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    if (!error && (await finalizeForUser())) {
       return response
     }
   }
@@ -54,10 +74,24 @@ export async function handleAuthCallback(request: NextRequest) {
       type,
       token_hash: tokenHash,
     })
-    if (!error) {
+    if (!error && (await finalizeForUser())) {
       return response
     }
   }
 
-  return NextResponse.redirect(errorUrl)
+  // Session already established (e.g. link opened twice in same browser)
+  if (await finalizeForUser()) {
+    return response
+  }
+
+  // Email may already be confirmed (scanner/prefetch consumed the one-time link).
+  // Send signup users to sign-in instead of a dead-end "expired" page.
+  if (isSignupConfirm) {
+    const signInUrl = new URL("/sign-in", origin)
+    signInUrl.searchParams.set("confirmed", "1")
+    signInUrl.searchParams.set("next", redirectPath)
+    return NextResponse.redirect(signInUrl)
+  }
+
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }

@@ -1,6 +1,7 @@
 import "server-only"
 import type Stripe from "stripe"
 import { getStripeClient } from "@/lib/stripe/config"
+import { recordBillingLedgerEntry } from "@/lib/referrals/ledger"
 import {
   cancelSubscriptionsExcept,
   listCustomerSubscriptions,
@@ -12,6 +13,59 @@ function subscriptionFromSession(session: Stripe.Checkout.Session): Stripe.Subsc
   if (!sub) return null
   if (typeof sub === "string") return null
   return sub
+}
+
+async function recordSubscriptionLedgerFromCheckout(
+  session: Stripe.Checkout.Session,
+  subscription: Stripe.Subscription,
+  userId: string
+) {
+  const stripe = getStripeClient()
+  const planKey = session.metadata?.plan_key ?? "membership"
+
+  const invoiceId =
+    typeof subscription.latest_invoice === "string"
+      ? subscription.latest_invoice
+      : subscription.latest_invoice?.id ??
+        (typeof session.invoice === "string" ? session.invoice : session.invoice?.id ?? null)
+
+  let amountCents = session.amount_total ?? 0
+  let currency = session.currency ?? "usd"
+  let description = `Subscription (${planKey})`
+  let occurredAt = new Date((session.created ?? Date.now() / 1000) * 1000).toISOString()
+  let stripeReferenceId = invoiceId ?? session.id
+
+  if (invoiceId) {
+    try {
+      const invoice = await stripe.invoices.retrieve(invoiceId)
+      amountCents = invoice.amount_paid ?? amountCents
+      currency = invoice.currency ?? currency
+      description = invoice.lines?.data?.[0]?.description ?? description
+      occurredAt = new Date(
+        (invoice.status_transitions?.paid_at ?? invoice.created) * 1000
+      ).toISOString()
+      stripeReferenceId = invoice.id
+    } catch {
+      // Fall back to checkout session totals.
+    }
+  }
+
+  if (amountCents <= 0) return
+
+  await recordBillingLedgerEntry({
+    userId,
+    entryType: "subscription",
+    amountCents,
+    currency,
+    description,
+    stripeReferenceId,
+    occurredAt,
+    metadata: {
+      plan_key: planKey,
+      checkout_session_id: session.id,
+      subscription_id: subscription.id,
+    },
+  })
 }
 
 export async function applySubscriptionFromCheckoutSession(
@@ -59,6 +113,7 @@ export async function applySubscriptionFromCheckoutSession(
   }
 
   await upsertUserBillingFromSubscription(subscription)
+  await recordSubscriptionLedgerFromCheckout(session, subscription, userId)
   return { ok: true }
 }
 

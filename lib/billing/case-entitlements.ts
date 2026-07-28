@@ -10,6 +10,7 @@ import {
 import type { UserBilling } from "@/lib/billing/types"
 import { isPayPerReportPlan, isPayPerReportChargeProduct } from "@/lib/billing/pay-per-report-pricing"
 import { chargePayPerReportUnlock } from "@/lib/stripe/pay-per-report-charge"
+import { recordBillingLedgerEntry } from "@/lib/referrals/ledger"
 
 export type CaseProductEntitlements = Record<BillingProduct, boolean>
 
@@ -134,6 +135,16 @@ export async function unlockCaseProduct(
         amount_cents: charge.amountCents,
         payment_intent_id: charge.paymentIntent.id,
       },
+    })
+
+    await recordBillingLedgerEntry({
+      userId,
+      entryType: "pay_per_report",
+      amountCents: charge.amountCents,
+      currency: charge.paymentIntent.currency ?? "usd",
+      description: `${BILLING_PRODUCT_LABELS[product]} unlock`,
+      stripeReferenceId: charge.paymentIntent.id,
+      metadata: { product, case_id: caseId },
     })
   }
 

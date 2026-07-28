@@ -1,10 +1,12 @@
 import AppSidebar from "@/components/app-sidebar"
+import { isAdminEmail } from "@/lib/billing/admin"
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/profile"
 import { ACCOUNT_TYPE_LABELS } from "@/types/profile"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser()
   const profile = await getCurrentProfile()
+  const showAdminNav = isAdminEmail(user?.email)
 
   const displayName =
     profile?.full_name?.trim() ||
@@ -22,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         displayName={displayName}
         accountLabel={accountLabel}
         email={user?.email ?? ""}
+        showAdminNav={showAdminNav}
       />
       <main className="ml-60 min-w-0 flex-1">{children}</main>
     </div>

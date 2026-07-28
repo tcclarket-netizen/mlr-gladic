@@ -13,6 +13,7 @@ import {
   ChevronDown,
   User,
   ShieldCheck,
+  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -47,6 +48,7 @@ type AppSidebarProps = {
   displayName: string
   accountLabel: string
   email: string
+  showAdminNav?: boolean
 }
 
 export default function AppSidebar({
@@ -54,6 +56,7 @@ export default function AppSidebar({
   displayName,
   accountLabel,
   email,
+  showAdminNav = false,
 }: AppSidebarProps) {
   const pathname = usePathname()
 
@@ -124,6 +127,22 @@ export default function AppSidebar({
               </li>
             )
           })}
+          {showAdminNav ? (
+            <li>
+              <Link
+                href="/admin/referrals"
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  pathname.startsWith("/admin")
+                    ? "bg-sidebar-accent text-sidebar-primary"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                )}
+              >
+                <Users className="h-4 w-4 shrink-0" />
+                <span>Partner referrals</span>
+              </Link>
+            </li>
+          ) : null}
         </ul>
       </nav>
 

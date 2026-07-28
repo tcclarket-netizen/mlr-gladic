@@ -9,6 +9,7 @@ import {
   upsertUserBillingFromSubscription,
 } from "@/lib/stripe/subscription-lifecycle"
 import { applyPayPerReportSetupFromWebhookSession } from "@/lib/stripe/sync-pay-per-report-setup"
+import { recordBillingLedgerEntry } from "@/lib/referrals/ledger"
 
 export const runtime = "nodejs"
 
@@ -105,6 +106,40 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", sub.id)
+  }
+
+  if (event.type === "invoice.paid") {
+    const invoice = event.data.object as Stripe.Invoice
+    const admin = createAdminClient()
+    const metadataUserId = invoice.metadata?.user_id
+    const customerId =
+      typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id ?? null
+
+    let resolvedUserId = metadataUserId ?? null
+    if (!resolvedUserId && customerId) {
+      const { data: billingRow } = await admin
+        .from("user_billing")
+        .select("user_id")
+        .eq("stripe_customer_id", customerId)
+        .maybeSingle()
+      resolvedUserId = billingRow?.user_id ?? null
+    }
+
+    const amountCents = invoice.amount_paid ?? 0
+    if (resolvedUserId && amountCents > 0) {
+      await recordBillingLedgerEntry({
+        userId: resolvedUserId,
+        entryType: "subscription",
+        amountCents,
+        currency: invoice.currency ?? "usd",
+        description: invoice.lines?.data?.[0]?.description ?? "Subscription invoice",
+        stripeReferenceId: invoice.id,
+        occurredAt: new Date(
+          (invoice.status_transitions?.paid_at ?? invoice.created) * 1000
+        ).toISOString(),
+        metadata: { invoice_number: invoice.number },
+      })
+    }
   }
 
   return NextResponse.json({ received: true })

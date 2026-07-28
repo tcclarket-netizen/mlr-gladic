@@ -39,7 +39,7 @@ const strengthColors = [
 
 const initialState: AuthActionState = {}
 
-export function SignUpForm() {
+export function SignUpForm({ referralCode }: { referralCode?: string }) {
   const [showPassword, setShowPassword] = useState(false)
   const [password, setPassword] = useState("")
   const [accountType, setAccountType] = useState("consumer")
@@ -138,6 +138,7 @@ export function SignUpForm() {
         </div>
 
         <input type="hidden" name="accountType" value={accountType} />
+        {referralCode ? <input type="hidden" name="referralCode" value={referralCode} /> : null}
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Account type</Label>

@@ -2,13 +2,19 @@ import Link from "next/link"
 import { MarketingAuthShell } from "@/components/marketing/marketing-auth-shell"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 
-export default function SignUpPage() {
+type SignUpPageProps = {
+  searchParams: Promise<{ ref?: string }>
+}
+
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const { ref } = await searchParams
+
   return (
     <MarketingAuthShell
       title="Create your membership account"
       subtitle="Choose a membership and unlock monthly report access inside the MLR workspace."
     >
-      <SignUpForm />
+      <SignUpForm referralCode={ref} />
 
       <p className="mt-5 text-center text-sm text-[#526174]">
         Already have an account?{" "}
