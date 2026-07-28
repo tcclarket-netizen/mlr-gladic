@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server"
 import {
   getPlanByKey,
   getStripePriceIdForPlan,
+  isPayPerReportPlanKey,
   type BillingInterval,
   type BillingPlanKey,
 } from "@/lib/billing/plans"
+import { getPayPerReportCurrency } from "@/lib/billing/pay-per-report-pricing"
 import { getStripeClient } from "@/lib/stripe/config"
 import {
   cancelSubscriptionsExcept,
@@ -27,18 +29,9 @@ type Body = {
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Body
   const plan = body.planKey ? getPlanByKey(body.planKey) : undefined
-  const interval: BillingInterval = body.interval === "year" ? "year" : "month"
 
   if (!plan || plan.key === "none" || plan.adminOnly) {
     return NextResponse.json({ error: "Invalid plan selection." }, { status: 400 })
-  }
-
-  const priceId = getStripePriceIdForPlan(plan.key, interval)
-  if (!priceId) {
-    return NextResponse.json(
-      { error: `Missing Stripe price mapping for ${plan.key} (${interval}).` },
-      { status: 500 }
-    )
   }
 
   const supabase = await createClient()
@@ -51,11 +44,6 @@ export async function POST(request: Request) {
   const stripe = getStripeClient()
   const hdrs = await headers()
   const origin = process.env.NEXT_PUBLIC_SITE_URL || hdrs.get("origin") || "http://localhost:3000"
-  const subscriptionMetadata = {
-    user_id: user.id,
-    plan_key: plan.key,
-    billing_interval: interval,
-  }
 
   const { data: billing } = await supabase
     .from("user_billing")
@@ -78,6 +66,44 @@ export async function POST(request: Request) {
       billing_status: "none",
       updated_at: new Date().toISOString(),
     })
+  }
+
+  if (isPayPerReportPlanKey(plan.key)) {
+    const setupCurrency = getPayPerReportCurrency()
+    const session = await stripe.checkout.sessions.create({
+      mode: "setup",
+      customer: customerId,
+      currency: setupCurrency,
+      success_url: `${origin}/billing?checkout=success&plan=pay_per_report&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/billing?checkout=cancel`,
+      metadata: {
+        user_id: user.id,
+        plan_key: plan.key,
+      },
+      setup_intent_data: {
+        metadata: {
+          user_id: user.id,
+          plan_key: plan.key,
+        },
+      },
+    })
+
+    return NextResponse.json({ url: session.url })
+  }
+
+  const interval: BillingInterval = body.interval === "year" ? "year" : "month"
+  const priceId = getStripePriceIdForPlan(plan.key, interval)
+  if (!priceId) {
+    return NextResponse.json(
+      { error: `Missing Stripe price mapping for ${plan.key} (${interval}).` },
+      { status: 500 }
+    )
+  }
+
+  const subscriptionMetadata = {
+    user_id: user.id,
+    plan_key: plan.key,
+    billing_interval: interval,
   }
 
   const existingSubscriptions = await listCustomerSubscriptions(stripe, customerId)
@@ -132,7 +158,7 @@ export async function POST(request: Request) {
     mode: "subscription",
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/billing?checkout=success`,
+    success_url: `${origin}/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/billing?checkout=cancel`,
     allow_promotion_codes: true,
     metadata: subscriptionMetadata,

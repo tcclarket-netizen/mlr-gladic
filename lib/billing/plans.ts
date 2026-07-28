@@ -1,5 +1,6 @@
 export type BillingPlanKey =
   | "none"
+  | "pay_per_report"
   | "basic_i"
   | "basic_ii"
   | "basic_iii"
@@ -34,6 +35,28 @@ type BillingPlan = {
   popular?: boolean
   /** Hidden from normal users; activate via admin-only flow (no Stripe). */
   adminOnly?: boolean
+  /** Stripe Checkout in setup mode (save card for per-unlock charges). */
+  checkoutMode?: "setup"
+}
+
+export const PAY_PER_REPORT_PLAN = {
+  key: "pay_per_report" as const,
+  name: "Pay Per Report",
+  monthlyPriceLabel: "$24.99–$149.99",
+  annualPriceLabel: null,
+  description:
+    "Save a card once, then pay only when you unlock Opposition, Legal, or Self reports.",
+  quotas: { opposition: 0, legal: 0, self: 0 },
+  envPriceKeys: {},
+  checkoutMode: "setup" as const,
+  features: [
+    "Unlimited cases",
+    "Opposition Report™ — charged per unlock",
+    "MY LEGAL REPORT™ — charged per unlock",
+    "MY SELF REPORT™ — charged per unlock",
+    "3-bureau upload per case",
+    "Email support",
+  ],
 }
 
 export const BILLING_PLANS: BillingPlan[] = [
@@ -218,6 +241,7 @@ export const FREE_TRIAL_OFFERING = {
 }
 
 export function getPlanByKey(key: string) {
+  if (key === PAY_PER_REPORT_PLAN.key) return PAY_PER_REPORT_PLAN
   return BILLING_PLANS.find((p) => p.key === key)
 }
 
@@ -231,6 +255,7 @@ export function isUnlimitedQuota(limit: number) {
 
 export function getPlanQuotas(planKey: BillingPlanKey): PlanQuotas {
   if (planKey === "none") return FREE_TRIAL_QUOTAS
+  if (planKey === "pay_per_report") return PAY_PER_REPORT_PLAN.quotas
   return getPlanByKey(planKey)?.quotas ?? NO_MEMBERSHIP_QUOTAS
 }
 
@@ -238,7 +263,7 @@ export function getStripePriceIdForPlan(
   planKey: BillingPlanKey,
   interval: BillingInterval
 ): string | null {
-  if (planKey === "none" || planKey === "admin") return null
+  if (planKey === "none" || planKey === "admin" || planKey === "pay_per_report") return null
   const plan = getPlanByKey(planKey)
   if (!plan || plan.adminOnly) return null
   const envKey = interval === "year" ? plan.envPriceKeys.annual : plan.envPriceKeys.monthly
@@ -248,6 +273,10 @@ export function getStripePriceIdForPlan(
 
 export function isPaidPlan(planKey: BillingPlanKey) {
   return planKey !== "none"
+}
+
+export function isPayPerReportPlanKey(planKey: BillingPlanKey) {
+  return planKey === "pay_per_report"
 }
 
 export function isAdminPlan(planKey: BillingPlanKey) {

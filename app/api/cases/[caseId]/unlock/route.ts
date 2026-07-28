@@ -42,7 +42,9 @@ export async function POST(
 
   const { data: billing } = await supabase
     .from("user_billing")
-    .select("plan_key, billing_status, current_period_start, current_period_end")
+    .select(
+      "plan_key, billing_status, current_period_start, current_period_end, stripe_customer_id, stripe_default_payment_method_id, reports_charged_count"
+    )
     .eq("user_id", user.id)
     .maybeSingle()
 

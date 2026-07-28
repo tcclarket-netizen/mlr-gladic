@@ -8,6 +8,7 @@ import {
   listCustomerSubscriptions,
   upsertUserBillingFromSubscription,
 } from "@/lib/stripe/subscription-lifecycle"
+import { applyPayPerReportSetupFromWebhookSession } from "@/lib/stripe/sync-pay-per-report-setup"
 
 export const runtime = "nodejs"
 
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
 
     const userId = session.metadata?.user_id
     const planKey = getPlanByKey(session.metadata?.plan_key ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY
+
+    if (userId && session.mode === "setup" && planKey === "pay_per_report") {
+      await applyPayPerReportSetupFromWebhookSession(session)
+    }
 
     if (userId && session.mode === "subscription") {
       const customerId =

@@ -3,7 +3,7 @@
 import { useState, type MouseEvent } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, Lock } from "lucide-react"
+import { CreditCard, Loader2, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ import { isUnlimitedQuota } from "@/lib/billing/plans"
 import type { ProductUsage } from "@/lib/billing/usage-summary"
 import { ProductQuotaBadge } from "@/components/billing/product-quota-badge"
 import { LegalReportFloridaAck } from "@/components/billing/legal-report-florida-ack"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 type UnlockProductButtonProps = {
   caseId: string
@@ -70,7 +71,8 @@ export function UnlockProductButton({
   const [floridaAck, setFloridaAck] = useState(false)
   const confirm = formatUnlockConfirmMessage(product, usage)
   const unlimited = isUnlimitedQuota(usage.limit)
-  const canUnlock = unlimited || (usage.limit > 0 && usage.remaining > 0)
+  const payPerUnlock = Boolean(usage.payPerUnlockCents)
+  const canUnlock = payPerUnlock || unlimited || (usage.limit > 0 && usage.remaining > 0)
   const requiresFloridaAck = product === "legal"
   const canConfirm = !requiresFloridaAck || floridaAck
 
@@ -128,7 +130,7 @@ export function UnlockProductButton({
     return <ProductQuotaBadge product={product} usage={usage} unlocked className={className} />
   }
 
-  if (usage.limit <= 0) {
+  if (usage.limit <= 0 && !payPerUnlock) {
     return (
       <div className={className}>
         <p className="text-xs text-muted-foreground">
@@ -170,6 +172,17 @@ export function UnlockProductButton({
               <AlertDialogTitle>{confirm.title}</AlertDialogTitle>
               <AlertDialogDescription>{confirm.body}</AlertDialogDescription>
             </AlertDialogHeader>
+            {"chargeNotice" in confirm && confirm.chargeNotice ? (
+              <Alert variant="default" className="border-amber-500/40 bg-amber-500/10">
+                <CreditCard className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                <AlertTitle className="text-amber-900 dark:text-amber-100">
+                  Automatic charge
+                </AlertTitle>
+                <AlertDescription className="text-amber-900/90 dark:text-amber-100/90">
+                  {confirm.chargeNotice}
+                </AlertDescription>
+              </Alert>
+            ) : null}
             {requiresFloridaAck ? (
               <LegalReportFloridaAck
                 checked={floridaAck}
@@ -182,7 +195,7 @@ export function UnlockProductButton({
                 onClick={handleUnlock}
                 disabled={pending || !canConfirm}
               >
-                {pending ? "Unlocking…" : "Confirm unlock"}
+                {pending ? "Unlocking…" : payPerUnlock ? "Confirm & pay" : "Confirm unlock"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

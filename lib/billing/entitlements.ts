@@ -1,5 +1,5 @@
 import type { UserBilling } from "@/lib/billing/types"
-import { isAdminPlan, isPaidPlan } from "@/lib/billing/plans"
+import { isAdminPlan, isPaidPlan, isPayPerReportPlanKey } from "@/lib/billing/plans"
 
 export type ProcessingEntitlement = {
   allowed: boolean
@@ -9,13 +9,26 @@ export type ProcessingEntitlement = {
 const BLOCKED_STATUSES = new Set(["past_due", "unpaid", "canceled"])
 
 export function getMembershipEntitlement(
-  billing: Pick<UserBilling, "plan_key" | "billing_status"> | null
+  billing: Pick<
+    UserBilling,
+    "plan_key" | "billing_status" | "stripe_default_payment_method_id"
+  > | null
 ): ProcessingEntitlement {
   if (!billing || billing.plan_key === "none") {
     return { allowed: true }
   }
 
   if (isAdminPlan(billing.plan_key)) {
+    return { allowed: true }
+  }
+
+  if (isPayPerReportPlanKey(billing.plan_key)) {
+    if (BLOCKED_STATUSES.has(billing.billing_status)) {
+      return {
+        allowed: false,
+        reason: `Your pay-per-report billing is ${billing.billing_status.replace("_", " ")}. Update payment in Billing to continue.`,
+      }
+    }
     return { allowed: true }
   }
 

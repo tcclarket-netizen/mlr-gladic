@@ -1,14 +1,20 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { BillingPlanKey } from "@/lib/billing/plans"
-import { getPlanQuotas, isUnlimitedQuota } from "@/lib/billing/plans"
+import { getPlanQuotas, isUnlimitedQuota, type BillingPlanKey } from "@/lib/billing/plans"
 import type { BillingProduct } from "@/lib/billing/products"
 import type { UserBilling } from "@/lib/billing/types"
+import {
+  getPayPerReportAmountCents,
+  isPayPerReportChargeProduct,
+  isPayPerReportPlan,
+} from "@/lib/billing/pay-per-report-pricing"
 
 export type ProductUsage = {
   used: number
   limit: number
   remaining: number
+  /** When set, each unlock charges this amount (pay-per-report plan). */
+  payPerUnlockCents?: number | null
 }
 
 export type UsageSummary = {
@@ -20,7 +26,14 @@ export type UsageSummary = {
   self: ProductUsage
 }
 
-type BillingPeriodInput = Pick<UserBilling, "plan_key" | "current_period_start" | "current_period_end">
+type BillingPeriodInput = Pick<
+  UserBilling,
+  | "plan_key"
+  | "current_period_start"
+  | "current_period_end"
+  | "stripe_customer_id"
+  | "stripe_default_payment_method_id"
+>
 
 function monthWindowUtc(now = new Date()) {
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0))
@@ -82,7 +95,15 @@ export async function getUsageSummary(
     countProductUsage(supabase, userId, "self", startIso),
   ])
 
-  const toUsage = (used: number, limit: number): ProductUsage => {
+  const toUsage = (used: number, limit: number, product: BillingProduct): ProductUsage => {
+    if (planKey === "pay_per_report" && isPayPerReportChargeProduct(product)) {
+      return {
+        used,
+        limit: 0,
+        remaining: 1,
+        payPerUnlockCents: getPayPerReportAmountCents(product),
+      }
+    }
     if (isUnlimitedQuota(limit)) {
       return { used, limit: Number.POSITIVE_INFINITY, remaining: Number.POSITIVE_INFINITY }
     }
@@ -97,9 +118,9 @@ export async function getUsageSummary(
     planKey,
     periodStart: startIso,
     periodEnd: endIso,
-    opposition: toUsage(oppositionUsed, quotas.opposition),
-    legal: toUsage(legalUsed, quotas.legal),
-    self: toUsage(selfUsed, quotas.self),
+    opposition: toUsage(oppositionUsed, quotas.opposition, "opposition"),
+    legal: toUsage(legalUsed, quotas.legal, "legal"),
+    self: toUsage(selfUsed, quotas.self, "self"),
   }
 }
 
@@ -111,6 +132,19 @@ export async function checkProductQuota(
   billing: BillingPeriodInput | null,
   product: BillingProduct
 ): Promise<QuotaCheck> {
+  const planKey = (billing?.plan_key as BillingPlanKey | undefined) ?? "none"
+
+  if (isPayPerReportPlan(planKey) && isPayPerReportChargeProduct(product)) {
+    if (!billing?.stripe_customer_id || !billing.stripe_default_payment_method_id) {
+      return {
+        allowed: false,
+        reason:
+          "Connect a payment card in Billing (Pay Per Report) before unlocking this report.",
+      }
+    }
+    return { allowed: true }
+  }
+
   const summary = await getUsageSummary(supabase, userId, billing)
   const usage = summary[product]
 

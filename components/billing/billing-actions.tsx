@@ -113,6 +113,55 @@ export function PlanCheckoutButton({
   )
 }
 
+export function PayPerReportSetupButton({
+  disabled,
+  label = "Connect card for pay-per-report",
+}: {
+  disabled?: boolean
+  label?: string
+}) {
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleCheckout = async () => {
+    setError(null)
+    setPending(true)
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planKey: "pay_per_report" }),
+      })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (!res.ok || !data.url) {
+        setError(data.error ?? "Unable to start checkout.")
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      setError("Unable to connect to billing.")
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div>
+      <Button className="w-full" size="sm" disabled={disabled || pending} onClick={handleCheckout}>
+        {pending ? (
+          <>
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            Redirecting…
+          </>
+        ) : (
+          label
+        )}
+      </Button>
+      {error ? <p className="mt-1 text-[11px] text-destructive">{error}</p> : null}
+    </div>
+  )
+}
+
 export function ActivateAdminPlanButton({
   disabled,
   label = "Activate admin access",

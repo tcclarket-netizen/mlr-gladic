@@ -3,11 +3,15 @@ import { BILLING_PRODUCT_LABELS } from "@/lib/billing/products"
 import { isUnlimitedQuota } from "@/lib/billing/plans"
 import type { ProductUsage, UsageSummary } from "@/lib/billing/usage-summary"
 import type { CaseProductEntitlements } from "@/lib/billing/case-entitlements"
+import { formatPayPerReportAmount } from "@/lib/billing/pay-per-report-pricing"
 
 export type { UsageSummary, ProductUsage, CaseProductEntitlements }
 
 export function formatProductQuotaLabel(product: BillingProduct, usage: ProductUsage) {
   const label = BILLING_PRODUCT_LABELS[product]
+  if (usage.payPerUnlockCents) {
+    return `${formatPayPerReportAmount(usage.payPerUnlockCents)} per unlock (card on file)`
+  }
   if (usage.limit <= 0) {
     return "Not included on your plan"
   }
@@ -22,6 +26,15 @@ export function formatProductQuotaLabel(product: BillingProduct, usage: ProductU
 
 export function formatUnlockConfirmMessage(product: BillingProduct, usage: ProductUsage) {
   const label = BILLING_PRODUCT_LABELS[product]
+  if (usage.payPerUnlockCents) {
+    const amountLabel = formatPayPerReportAmount(usage.payPerUnlockCents)
+    return {
+      title: `Unlock ${label}?`,
+      body: `Confirming will unlock this report for this case and automatically charge ${amountLabel} to the card on file.`,
+      chargeNotice: `Your saved payment method will be charged ${amountLabel} immediately when you confirm.`,
+      remainingAfter: usage.remaining,
+    }
+  }
   if (isUnlimitedQuota(usage.limit)) {
     return {
       title: `Unlock ${label}?`,

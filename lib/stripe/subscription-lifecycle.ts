@@ -103,21 +103,31 @@ export async function upsertUserBillingFromSubscription(subscription: Stripe.Sub
   const nextPlanKey = getPlanByKey(planFromMeta ?? "")?.key ?? NO_MEMBERSHIP_PLAN_KEY
   if (nextPlanKey === "admin") return
 
-  await admin.from("user_billing").upsert({
-    user_id: userId,
-    stripe_customer_id:
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : subscription.customer.id,
-    stripe_subscription_id: subscription.id,
-    stripe_price_id: subscription.items.data[0]?.price?.id ?? null,
-    plan_key: nextPlanKey,
-    billing_status: mapSubscriptionBillingStatus(subscription.status),
-    current_period_start: period.start,
-    current_period_end: period.end,
-    cancel_at_period_end: subscription.cancel_at_period_end,
-    updated_at: new Date().toISOString(),
-  })
+  const isMembershipPlan = nextPlanKey !== "none" && nextPlanKey !== "pay_per_report"
+
+  await admin.from("user_billing").upsert(
+    {
+      user_id: userId,
+      stripe_customer_id:
+        typeof subscription.customer === "string"
+          ? subscription.customer
+          : subscription.customer.id,
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: subscription.items.data[0]?.price?.id ?? null,
+      plan_key: nextPlanKey,
+      billing_status: mapSubscriptionBillingStatus(subscription.status),
+      current_period_start: period.start,
+      current_period_end: period.end,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+      ...(isMembershipPlan
+        ? {
+            stripe_default_payment_method_id: null,
+          }
+        : {}),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  )
 }
 
 export async function updateCustomerSubscriptionPlan(
