@@ -25,7 +25,6 @@ import {
   PayPerReportSetupButton,
   PlanCheckoutButton,
 } from "@/components/billing/billing-actions"
-import { FloridaMembershipNotice } from "@/components/billing/florida-membership-notice"
 import { FreeTrialPlanCard } from "@/components/billing/free-trial-plan-card"
 import { createClient } from "@/lib/supabase/server"
 import { getStripeClient } from "@/lib/stripe/config"
@@ -448,9 +447,6 @@ export default async function BillingPage({
         </div>
 
         <h2 className="mb-4 text-sm font-semibold text-foreground">Plans</h2>
-        <div className="mb-6">
-          <FloridaMembershipNotice />
-        </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <FreeTrialPlanCard
             isCurrent={isFreeTrial}
