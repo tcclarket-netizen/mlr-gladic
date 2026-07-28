@@ -63,7 +63,8 @@ export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreate
           </Label>
           <Input id="county" name="county" placeholder="e.g. Broward" required />
           <p className="text-[11px] text-muted-foreground">
-            Used for MY SELF REPORT™ court caption ({`{COUNTY}`}, Florida).
+            Optional. Court caption lines in the self-report use print-and-fill blanks; county is not
+            auto-inserted into the complaint template.
           </p>
         </div>
 

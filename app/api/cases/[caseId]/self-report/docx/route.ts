@@ -45,16 +45,13 @@ export async function GET(
     )
   }
 
-  const [reportRes, caseRes] = await Promise.all([
-    supabase
-      .from("generated_reports")
-      .select("content, status")
-      .eq("case_id", caseId)
-      .eq("user_id", user.id)
-      .eq("report_type", "legal_report")
-      .maybeSingle(),
-    supabase.from("cases").select("county").eq("id", caseId).eq("user_id", user.id).maybeSingle(),
-  ])
+  const reportRes = await supabase
+    .from("generated_reports")
+    .select("content, status")
+    .eq("case_id", caseId)
+    .eq("user_id", user.id)
+    .eq("report_type", "legal_report")
+    .maybeSingle()
 
   if (reportRes.error || !reportRes.data || reportRes.data.status !== "ready") {
     return NextResponse.json({ error: "Legal report not found or not ready." }, { status: 404 })
@@ -62,10 +59,7 @@ export async function GET(
 
   const content = reportRes.data.content as LegalReportContent
   const reference = content.case_reference || caseReferenceCode(caseId)
-  const fillInput = buildSelfReportFillInput({
-    content,
-    caseCounty: caseRes.data?.county,
-  })
+  const fillInput = buildSelfReportFillInput({ content })
 
   const docxBuffer = await generateSelfReportDocx(fillInput)
   const filename = `MY-SELF-REPORT-${reference}.docx`

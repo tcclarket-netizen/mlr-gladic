@@ -3,12 +3,14 @@
  * Template: `templates/self-report-official.docx`
  *
  * Each token appears in the DOCX as `{TOKEN}` and is replaced from MY LEGAL REPORT™
- * case data at download time. All other document content is left unchanged.
+ * case data at download time. Phrase-level Florida defaults are replaced with the case state.
  */
 export const SELF_REPORT_TEMPLATE_TOKENS = {
   /** Plaintiff / consumer legal name (appears 3× in complaint + verification) */
   CLIENT_FULL_NAME: "{CLIENT FULL NAME}",
-  /** Florida circuit court county caption, e.g. BROWARD COUNTY */
+  /** Case state of residence (cover page + jurisdiction references) */
+  STATE: "{STATE}",
+  /** Legacy token — court caption uses fill-in blanks; kept for compatibility */
   COUNTY: "{COUNTY}",
 } as const
 
@@ -17,7 +19,7 @@ export type SelfReportTemplateToken =
 
 export type SelfReportFieldDefinition = {
   token: SelfReportTemplateToken
-    source: "legal_report.client_name" | "case.county"
+  source: "legal_report.client_name" | "legal_report.case_state" | "case.county"
   description: string
 }
 
@@ -28,9 +30,13 @@ export const SELF_REPORT_FIELDS: SelfReportFieldDefinition[] = [
     description: "Consumer full legal name from the generated MY LEGAL REPORT™",
   },
   {
+    token: SELF_REPORT_TEMPLATE_TOKENS.STATE,
+    source: "legal_report.case_state",
+    description: "State of residence selected on the case — drives state-specific form language",
+  },
+  {
     token: SELF_REPORT_TEMPLATE_TOKENS.COUNTY,
     source: "case.county",
-    description:
-      "County from the case file — formatted as e.g. Broward COUNTY when the self-report is generated",
+    description: "Legacy caption token; complaint header uses print-and-fill blanks in the template",
   },
 ]

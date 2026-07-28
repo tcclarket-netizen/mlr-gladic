@@ -185,7 +185,7 @@ export async function processCase(
       { onConflict: "case_id,report_type" }
     )
 
-    const { content: reportContent, markdown } = buildLegalReportWithMarkdown({
+    const { content: reportContent, markdown } = await buildLegalReportWithMarkdown({
       clientName: caseRow.client_name,
       caseState: caseRow.state,
       caseReference: caseReferenceCode(caseId),

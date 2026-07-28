@@ -81,9 +81,13 @@ export function SelfReportTab({
               My Self Report — What do I document, preserve, file, and do next?
             </h3>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Official Florida pre-suit complaint package. Purchased self-help action documentation.
-              Build your record and follow the process — structured instruments, evidence preservation,
-              complaint templates, and a step-by-step roadmap.
+              State-specific pre-suit complaint package for{" "}
+              <span className="font-medium text-foreground">
+                {legalReportContent.case_state}
+              </span>
+              . Purchased self-help action documentation. Build your record and follow the
+              process — structured instruments, evidence preservation, complaint templates, and a
+              step-by-step roadmap.
             </p>
 
             <dl className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
@@ -108,9 +112,9 @@ export function SelfReportTab({
             </dl>
 
             {!caseCounty?.trim() && (
-              <p className="mt-3 text-xs text-destructive">
-                County is missing on this case. Create a new case with county filled in, or add
-                county support for existing cases to complete the self-report caption.
+              <p className="mt-3 text-xs text-muted-foreground">
+                County is optional. Complaint caption lines in the downloaded package use
+                print-and-fill blanks.
               </p>
             )}
 

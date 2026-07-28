@@ -20,6 +20,10 @@ import {
   formatUtilizationLine,
 } from "@/lib/metrics/executive-snapshot"
 import { legalReportToMarkdown } from "@/lib/report-generation/legal-report-markdown"
+import {
+  getStateRightsProfile,
+  normalizeConsumerState,
+} from "@/lib/report-generation/state-rights-data"
 
 export type BuildLegalReportInput = {
   clientName: string
@@ -31,11 +35,12 @@ export type BuildLegalReportInput = {
   uploadedFiles: { bureau: Bureau; file_name: string; report_date?: string | null }[]
 }
 
-function buildSectionBodies(input: BuildLegalReportInput): Record<string, string> {
+async function buildSectionBodies(input: BuildLegalReportInput): Promise<Record<string, string>> {
   const { clientName, caseState, metrics, tradelines, extractions, uploadedFiles } = input
+  const stateProfile = getStateRightsProfile(caseState)
+  const { stateName, stateAbbr } = normalizeConsumerState(caseState)
   const snap = metrics.executive_snapshot
   const upperName = clientName.toUpperCase()
-  const stateAbbr = caseState.length === 2 ? caseState.toUpperCase() : caseState
 
   const avgScoreLabel =
     metrics.bureaus_analyzed.length === 3
@@ -109,7 +114,7 @@ function buildSectionBodies(input: BuildLegalReportInput): Record<string, string
   return {
     "1": [
       `Consumer Name: ${upperName}`,
-      `State of Residence: ${stateAbbr}`,
+      `State of Residence: ${stateName} (${stateAbbr})`,
       `Credit Bureaus Reviewed: ${formatBureauCheckboxes(metrics.bureaus_analyzed)}`,
       "The consumer is a natural person asserting statutory rights and protections under federal and state law. No implied consent, blanket authorization, or waiver of rights is granted to any credit reporting agency, furnisher, or third party.",
     ].join("\n"),
@@ -129,17 +134,14 @@ function buildSectionBodies(input: BuildLegalReportInput): Record<string, string
       "• Johnson v. MBNA, 357 F.3d 426 (4th Cir. 2004)",
       "• Roberts v. Carter-Young, Inc., No. 23-1911 (4th Cir. 2025)",
       "• TransUnion LLC v. Ramirez, 594 U.S. ___ (2021)",
-      getStateLawBlock(caseState),
+      getStateLawBlock(stateProfile),
       "Federal/Administrative Guidance (Auto-Injected)",
       "• Permissible purpose and access review under 15 U.S.C. § 1681b",
       "• CFPB supervisory/enforcement themes (reasonable investigation, dispute handling)",
     ].join("\n"),
-    "3A": buildSection3ABody({
+    "3A": await buildSection3ABody({
       clientName,
       caseState,
-      extractions,
-      hasCollectionActivity:
-        metrics.collections_count > 0 || metrics.negative_item_count > 0,
     }),
     "4": section4,
     "5": [
@@ -182,9 +184,9 @@ function buildSectionBodies(input: BuildLegalReportInput): Record<string, string
       "• Equifax dispute and method-of-verification request (if uploaded)",
       "• TransUnion dispute and method-of-verification request (if uploaded)",
       "• Furnisher disputes as applicable (original creditor / collector / account owner)",
-      `State-Level Safe Harbor (${caseState}):`,
-      `• ${caseState} Office of Attorney General — Bureau of Consumer Protection (consumer complaint portal)`,
-      `• ${caseState} financial regulator / banking department — where applicable to financial entities`,
+      `State-Level Safe Harbor (${stateName}):`,
+      `• ${stateProfile.attorneyGeneral.office} — ${stateProfile.attorneyGeneral.complaint}`,
+      `• ${stateProfile.regulatorNote}`,
       "Federal Oversight:",
       "• CFPB — Submit a complaint (credit reporting / debt collection / credit cards)",
       "• FTC — ReportFraud.ftc.gov (bad business practices / fraud reporting)",
@@ -234,8 +236,8 @@ function buildSectionBodies(input: BuildLegalReportInput): Record<string, string
   }
 }
 
-export function buildLegalReport(input: BuildLegalReportInput): LegalReportContent {
-  const bodies = buildSectionBodies(input)
+export async function buildLegalReport(input: BuildLegalReportInput): Promise<LegalReportContent> {
+  const bodies = await buildSectionBodies(input)
   const generatedAt = new Date().toISOString()
 
   const sections: LegalReportSection[] = REPORT_SECTION_DEFINITIONS.map((def) => ({
@@ -263,8 +265,8 @@ export function buildLegalReport(input: BuildLegalReportInput): LegalReportConte
   return content
 }
 
-export function buildLegalReportWithMarkdown(input: BuildLegalReportInput) {
-  const content = buildLegalReport(input)
+export async function buildLegalReportWithMarkdown(input: BuildLegalReportInput) {
+  const content = await buildLegalReport(input)
   return {
     content,
     markdown: legalReportToMarkdown(content),

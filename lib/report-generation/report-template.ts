@@ -48,9 +48,26 @@ export const AFFIRMATIVE_POSTURE_BLOCK = `Affirmative Cause-to-Action Posture:
 Right to demand documentary verification, method-of-verification disclosure, correction/suppression pending compliance, and record preservation — without allegation of fraud by default.
 Preserved Rights: Verification - Correction - State Enforcement - Record-Building`
 
-export function getStateLawBlock(state: string): string {
-  return `State Law (Auto-Injected: ${state})
-• State consumer protection and fair credit reporting principles may apply where personal consumer transactions are involved.
-• Consult applicable state unfair trade practices, debt collection, and credit reporting statutes for ${state}.
-• Pennsylvania-style references in template libraries are replaced at generation time for the consumer's state of residence.`
+export function getStateLawBlock(profile: {
+  stateName: string
+  consumerProtection: { name: string; citation: string }
+  debtCollection: { summary: string; enforcement: string }
+  creditReporting: { freeze: string; correction: string }
+  attorneyGeneral: { office: string; complaint: string }
+  specificStatutes: { name: string; citation: string }[]
+}): string {
+  const statuteLines = profile.specificStatutes
+    .slice(0, 5)
+    .map((s) => `• ${s.name} — ${s.citation}`)
+
+  return [
+    `State Law (Auto-Injected: ${profile.stateName})`,
+    `• ${profile.consumerProtection.name} — ${profile.consumerProtection.citation}`,
+    `• Debt collection (state supplement): ${profile.debtCollection.summary}`,
+    `• Credit reporting / freeze: ${profile.creditReporting.freeze}`,
+    `• Corrections / disputes: ${profile.creditReporting.correction}`,
+    ...statuteLines,
+    `• ${profile.attorneyGeneral.office} — ${profile.attorneyGeneral.complaint}`,
+    `• Enforcement pathways: ${profile.debtCollection.enforcement}`,
+  ].join("\n")
 }
