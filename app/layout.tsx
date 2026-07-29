@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   title: 'GLADIC AI™ · MLR Credit Rights Intelligence',
   description:
     'Generate Opposition Reports™, My Legal Reports™, and My Self Reports™ through membership access. Credit Rights Intelligence™ from one secure dashboard.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.ico',
+  },
+  manifest: '/site.webmanifest',
 }
 
 export default function RootLayout({
