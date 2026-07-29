@@ -20,6 +20,11 @@ import {
   GLADIC_LOGO_DISPLAY,
   readGladicLogo,
 } from "@/lib/report-generation/gladic-branding"
+import {
+  injectSection3ADocxIntoLegalReport,
+  SECTION_3A_DOCX_BODY_MARKER,
+  resolveSection3ADocxPath,
+} from "@/lib/report-generation/section-3a-docx"
 
 /** Primary: legal body / sections. Secondary: cover & marketing lines. */
 const FONT_COURIER = "Courier New"
@@ -481,9 +486,17 @@ export async function generateLegalReportDocx(
 
   children.push(pageBreakParagraph())
 
-  content.sections.forEach((section, index) => {
+  content.sections.forEach((section) => {
     children.push(sectionTitleParagraph(section.number, section.title))
-    children.push(...paragraphsFromBlock(section.body))
+    if (
+      section.id === "3A" &&
+      resolveSection3ADocxPath(content.case_state)
+    ) {
+      // Placeholder replaced after packing with the original state Section 3A DOCX body.
+      children.push(paragraph(SECTION_3A_DOCX_BODY_MARKER))
+    } else {
+      children.push(...paragraphsFromBlock(section.body))
+    }
   })
 
   children.push(pageBreakParagraph())
@@ -593,7 +606,12 @@ export async function generateLegalReportDocx(
     ],
   })
 
-  return Buffer.from(await Packer.toBuffer(doc))
+  const packed = Buffer.from(await Packer.toBuffer(doc))
+  return injectSection3ADocxIntoLegalReport(
+    packed,
+    content.case_state,
+    content.client_name
+  )
 }
 
 function convertMarginInches(inches: number) {
