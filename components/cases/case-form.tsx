@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CreditReportOwnershipAck } from "@/components/cases/credit-report-ownership-ack"
+import { LegalResearchConsentAck } from "@/components/cases/legal-research-consent-ack"
 import { US_STATES } from "@/lib/cases/constants"
 import { createCase, type CaseActionState } from "@/lib/cases/actions"
 
@@ -23,6 +24,8 @@ export function CaseForm({
 }: CaseFormProps) {
   const [state, formAction, pending] = useActionState(createCase, initialState)
   const [ownershipAck, setOwnershipAck] = useState(false)
+  const [legalResearchAck, setLegalResearchAck] = useState(false)
+  const consentsAccepted = ownershipAck && legalResearchAck
 
   return (
     <>
@@ -102,7 +105,13 @@ export function CaseForm({
           invalid={Boolean(state.error) && !ownershipAck}
         />
 
-        <Button type="submit" className="w-full" disabled={pending || !ownershipAck}>
+        <LegalResearchConsentAck
+          accepted={legalResearchAck}
+          onAcceptedChange={setLegalResearchAck}
+          invalid={Boolean(state.error) && !legalResearchAck}
+        />
+
+        <Button type="submit" className="w-full" disabled={pending || !consentsAccepted}>
           {pending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating…

@@ -694,7 +694,11 @@ export function CreditReportOwnershipAck({
           <DialogFooter className="shrink-0 flex-col gap-2 border-t border-border px-5 py-4 sm:flex-col sm:space-x-0">
             <Button
               type="button"
-              className="w-full"
+              className={cn(
+                "w-full",
+                requiredComplete &&
+                  "bg-status-success text-white hover:bg-status-success/90"
+              )}
               disabled={!requiredComplete}
               onClick={handleContinue}
             >

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CreditReportOwnershipAck } from "@/components/cases/credit-report-ownership-ack"
+import { LegalResearchConsentAck } from "@/components/cases/legal-research-consent-ack"
 import { US_STATES } from "@/lib/cases/constants"
 import { createCase, type CaseActionState } from "@/lib/cases/actions"
 
@@ -20,6 +21,8 @@ type OnboardingCreateCaseStepProps = {
 export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreateCaseStepProps) {
   const [state, formAction, pending] = useActionState(createCase, initialState)
   const [ownershipAck, setOwnershipAck] = useState(false)
+  const [legalResearchAck, setLegalResearchAck] = useState(false)
+  const consentsAccepted = ownershipAck && legalResearchAck
 
   useEffect(() => {
     if (state.caseId) {
@@ -108,11 +111,17 @@ export function OnboardingCreateCaseStep({ onBack, onCreated }: OnboardingCreate
           invalid={Boolean(state.error) && !ownershipAck}
         />
 
+        <LegalResearchConsentAck
+          accepted={legalResearchAck}
+          onAcceptedChange={setLegalResearchAck}
+          invalid={Boolean(state.error) && !legalResearchAck}
+        />
+
         <div className="mt-6 flex gap-3">
           <Button type="button" variant="outline" onClick={onBack} className="flex-1">
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
           </Button>
-          <Button type="submit" className="flex-1" disabled={pending || !ownershipAck}>
+          <Button type="submit" className="flex-1" disabled={pending || !consentsAccepted}>
             {pending ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Creating…

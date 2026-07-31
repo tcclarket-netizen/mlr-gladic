@@ -117,6 +117,11 @@ export async function createCase(
     const creditReportConsentPayloadRaw = String(
       formData.get("creditReportConsentPayload") ?? ""
     ).trim()
+    const legalResearchConsentAck =
+      String(formData.get("legalResearchConsentAck") ?? "") === "true"
+    const legalResearchConsentPayloadRaw = String(
+      formData.get("legalResearchConsentPayload") ?? ""
+    ).trim()
     const redirectTo = String(formData.get("redirectTo") ?? "")
 
     if (!clientName || !county || !state) {
@@ -130,6 +135,13 @@ export async function createCase(
       }
     }
 
+    if (!legalResearchConsentAck) {
+      return {
+        error:
+          "You must complete the Legal Research Consent, Acknowledgment, Authorization, and Terms of Use before creating a case.",
+      }
+    }
+
     let creditReportConsentPayload: Record<string, unknown> | null = null
     if (creditReportConsentPayloadRaw) {
       try {
@@ -139,6 +151,21 @@ export async function createCase(
         }
       } catch {
         return { error: "Consent acknowledgment data is invalid. Please open and accept it again." }
+      }
+    }
+
+    let legalResearchConsentPayload: Record<string, unknown> | null = null
+    if (legalResearchConsentPayloadRaw) {
+      try {
+        const parsed = JSON.parse(legalResearchConsentPayloadRaw) as Record<string, unknown>
+        if (parsed && typeof parsed === "object") {
+          legalResearchConsentPayload = parsed
+        }
+      } catch {
+        return {
+          error:
+            "Legal research consent acknowledgment data is invalid. Please open and accept it again.",
+        }
       }
     }
 
@@ -159,13 +186,17 @@ export async function createCase(
       return { error: error?.message ?? "Failed to create case." }
     }
 
+    const acceptedAt = new Date().toISOString()
     await logCaseEvent(supabase, user.id, caseRow.id, "case_created", "Case created", {
       client_name: clientName,
       county,
       state,
       credit_report_ownership_ack: true,
-      credit_report_ownership_ack_at: new Date().toISOString(),
+      credit_report_ownership_ack_at: acceptedAt,
       credit_report_consent: creditReportConsentPayload,
+      legal_research_consent_ack: true,
+      legal_research_consent_ack_at: acceptedAt,
+      legal_research_consent: legalResearchConsentPayload,
     })
 
     revalidatePath("/dashboard")
